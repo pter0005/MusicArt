@@ -1149,13 +1149,13 @@ footer::before {
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
   <defs>
     <symbol id="logo-musicart" viewBox="0 0 100 100">
-      <!-- 3 arcos bordô concêntricos: 10h → 4:30 (165° sweep), uniformes -->
+      <!-- 3 arcos bordô concêntricos: 10:30 → 4:30 (180° exato), uniformes, round caps -->
       <g fill="none" stroke="var(--bordo)" stroke-linecap="round" stroke-width="3.5">
-        <path d="M 32.68 40 A 20 20 0 0 0 64.14 64.14"/>
-        <path d="M 26.62 36.5 A 27 27 0 0 0 69.09 69.09"/>
-        <path d="M 20.56 33 A 34 34 0 0 0 74.04 74.04"/>
+        <path d="M 35.86 35.86 A 20 20 0 0 0 64.14 64.14"/>
+        <path d="M 30.91 30.91 A 27 27 0 0 0 69.09 69.09"/>
+        <path d="M 25.96 25.96 A 34 34 0 0 0 74.04 74.04"/>
       </g>
-      <!-- Arco dourado: 1h → 4h (90° sweep) -->
+      <!-- Arco dourado: 1h → 4h (90° exato), round caps -->
       <g fill="none" stroke="var(--dourado)" stroke-linecap="round" stroke-width="3.5">
         <path d="M 65 24.02 A 30 30 0 0 1 75.98 65"/>
       </g>
@@ -1876,23 +1876,52 @@ import * as THREE from 'three';
       emissive: p.bordEm, emissiveIntensity: p.bordEmI
     });
 
-    // ===== ARCOS DE ONDA SONORA (bordô, do 10h ao 4:30 passando por baixo, 165°) =====
+    // ===== ARCOS DE ONDA SONORA (bordô, 10:30 → 4:30, exato 180°, COM round caps) =====
     const arcRadii = [1.45, 1.95, 2.45];
+    const tubeR = 0.085;
+    const capGeo = new THREE.SphereGeometry(tubeR, 20, 16);
+
     arcRadii.forEach((r) => {
-      const arcAngle = Math.PI * 11 / 12; // 165° exato
-      const torus = new THREE.TorusGeometry(r, 0.085, 16, 100, arcAngle);
-      const mesh = new THREE.Mesh(torus, bordoMat);
-      // Rotação 150° CCW põe o início (originalmente em 3h) no 10h; sweep até 4:30
-      mesh.rotation.z = Math.PI * 5 / 6;
-      group.add(mesh);
+      const arcAngle = Math.PI; // 180° exato (10:30 → 4:30)
+      const arcGroup = new THREE.Group();
+
+      // Tubo torus
+      const torus = new THREE.TorusGeometry(r, tubeR, 16, 120, arcAngle);
+      arcGroup.add(new THREE.Mesh(torus, bordoMat));
+
+      // Round cap inicial (em 0° local antes da rotação)
+      const startCap = new THREE.Mesh(capGeo, bordoMat);
+      startCap.position.set(r, 0, 0);
+      arcGroup.add(startCap);
+
+      // Round cap final (em arcAngle local antes da rotação)
+      const endCap = new THREE.Mesh(capGeo, bordoMat);
+      endCap.position.set(r * Math.cos(arcAngle), r * Math.sin(arcAngle), 0);
+      arcGroup.add(endCap);
+
+      // Rotação 135° CCW põe o início em 10:30; sweep até 4:30
+      arcGroup.rotation.z = Math.PI * 3 / 4;
+      group.add(arcGroup);
     });
 
-    // ===== ARCO DOURADO (1h → 4h, exato 90°) =====
-    const dArc = new THREE.TorusGeometry(2.45, 0.08, 14, 60, Math.PI / 2);
-    const dArcMesh = new THREE.Mesh(dArc, doradoMat);
-    // Rotação -30° põe o início no 4h; sweep CCW até 1h
-    dArcMesh.rotation.z = -Math.PI / 6;
-    group.add(dArcMesh);
+    // ===== ARCO DOURADO (4h → 1h, 90°, COM round caps) =====
+    const dArcAngle = Math.PI / 2;
+    const dR = 2.45;
+    const dArcGroup = new THREE.Group();
+    const dTorus = new THREE.TorusGeometry(dR, tubeR, 16, 80, dArcAngle);
+    dArcGroup.add(new THREE.Mesh(dTorus, doradoMat));
+
+    const dStartCap = new THREE.Mesh(capGeo, doradoMat);
+    dStartCap.position.set(dR, 0, 0);
+    dArcGroup.add(dStartCap);
+
+    const dEndCap = new THREE.Mesh(capGeo, doradoMat);
+    dEndCap.position.set(dR * Math.cos(dArcAngle), dR * Math.sin(dArcAngle), 0);
+    dArcGroup.add(dEndCap);
+
+    // Rotação -30° põe início em 4h; sweep CCW até 1h
+    dArcGroup.rotation.z = -Math.PI / 6;
+    group.add(dArcGroup);
 
     // ===== NOTA MUSICAL (oitava) =====
     const note = new THREE.Group();
