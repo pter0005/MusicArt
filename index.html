@@ -1149,25 +1149,25 @@ footer::before {
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
   <defs>
     <symbol id="logo-musicart" viewBox="0 0 100 100">
-      <!-- 3 arcos bordô concêntricos: 10:30 → 4:30 (180° exato), uniformes, round caps -->
-      <g fill="none" stroke="var(--bordo)" stroke-linecap="round" stroke-width="3.5">
-        <path d="M 35.86 35.86 A 20 20 0 0 0 64.14 64.14"/>
-        <path d="M 30.91 30.91 A 27 27 0 0 0 69.09 69.09"/>
-        <path d="M 25.96 25.96 A 34 34 0 0 0 74.04 74.04"/>
+      <!-- 3 arcos bordô concêntricos MAIORES: 10:30 → 4:30 (180°), uniformes, round caps -->
+      <g fill="none" stroke="var(--bordo)" stroke-linecap="round" stroke-width="4">
+        <path d="M 31.62 31.62 A 26 26 0 0 0 68.38 68.38"/>
+        <path d="M 26.67 26.67 A 33 33 0 0 0 73.33 73.33"/>
+        <path d="M 21.72 21.72 A 40 40 0 0 0 78.28 78.28"/>
       </g>
-      <!-- Arco dourado: 1h → 4h (90° exato), round caps -->
-      <g fill="none" stroke="var(--dourado)" stroke-linecap="round" stroke-width="3.5">
-        <path d="M 65 24.02 A 30 30 0 0 1 75.98 65"/>
+      <!-- Arco dourado: 1h → 4h (90°), maior também -->
+      <g fill="none" stroke="var(--dourado)" stroke-linecap="round" stroke-width="4">
+        <path d="M 68 18.82 A 36 36 0 0 1 81.18 68"/>
       </g>
-      <!-- Nota oitava (dourada) no espaço aberto, proporção refinada -->
+      <!-- Nota oitava (dourada) maior, posicionada à direita do centro -->
       <g fill="var(--dourado)">
-        <ellipse cx="46" cy="62" rx="5.5" ry="4" transform="rotate(-25 46 62)"/>
+        <ellipse cx="49" cy="63" rx="7" ry="5" transform="rotate(-25 49 63)"/>
       </g>
-      <g fill="none" stroke="var(--dourado)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M 51 60 L 51 25"/>
+      <g fill="none" stroke="var(--dourado)" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M 55 60.5 L 55 22"/>
       </g>
       <g fill="var(--dourado)">
-        <path d="M 51 25 Q 64 27 68 38 Q 67 32 60 33 Q 56 35 51 33 Z"/>
+        <path d="M 55 22 Q 70 24 74 36 Q 73 30 65 31 Q 60 33 55 31 Z"/>
       </g>
     </symbol>
     <symbol id="ornament" viewBox="0 0 24 24">
@@ -1823,7 +1823,7 @@ import * as THREE from 'three';
 
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(40, 1, 0.1, 100);
-  camera.position.set(0, 0, 9);
+  camera.position.set(0, 0, 10);
 
   const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -1880,8 +1880,8 @@ import * as THREE from 'three';
     });
 
     // ===== ARCOS DE ONDA SONORA (bordô, 10:30 → 4:30, exato 180°, COM round caps) =====
-    const arcRadii = [1.45, 1.95, 2.45];
-    const tubeR = 0.085;
+    const arcRadii = [1.75, 2.35, 2.95];
+    const tubeR = 0.095;
     const capGeo = new THREE.SphereGeometry(tubeR, 20, 16);
 
     arcRadii.forEach((r) => {
@@ -1909,7 +1909,7 @@ import * as THREE from 'three';
 
     // ===== ARCO DOURADO (4h → 1h, 90°, COM round caps) =====
     const dArcAngle = Math.PI / 2;
-    const dR = 2.45;
+    const dR = 2.65;
     const dArcGroup = new THREE.Group();
     const dTorus = new THREE.TorusGeometry(dR, tubeR, 16, 80, dArcAngle);
     dArcGroup.add(new THREE.Mesh(dTorus, doradoMat));
