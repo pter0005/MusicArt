@@ -1149,25 +1149,28 @@ footer::before {
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
   <defs>
     <symbol id="logo-musicart" viewBox="0 0 100 100">
-      <!-- 3 arcos bordô concêntricos MAIORES: 10:30 → 4:30 (180°), uniformes, round caps -->
-      <g fill="none" stroke="var(--bordo)" stroke-linecap="round" stroke-width="4">
-        <path d="M 31.62 31.62 A 26 26 0 0 0 68.38 68.38"/>
-        <path d="M 26.67 26.67 A 33 33 0 0 0 73.33 73.33"/>
-        <path d="M 21.72 21.72 A 40 40 0 0 0 78.28 78.28"/>
+      <!-- 3 arcos bordô concêntricos: 10:30 → 4:30 (180°), radii 30/37/44 -->
+      <g fill="none" stroke="var(--bordo)" stroke-linecap="round" stroke-width="3">
+        <path d="M 28.79 28.79 A 30 30 0 1 0 71.21 71.21"/>
+        <path d="M 23.83 23.83 A 37 37 0 1 0 76.17 76.17"/>
+        <path d="M 18.88 18.88 A 44 44 0 1 0 81.12 81.12"/>
       </g>
-      <!-- Arco dourado: 1h → 4h (90°), maior também -->
-      <g fill="none" stroke="var(--dourado)" stroke-linecap="round" stroke-width="4">
-        <path d="M 68 18.82 A 36 36 0 0 1 81.18 68"/>
+      <!-- Arco dourado: 1h → 3:30 (~75°), mesma espessura dos bordô -->
+      <g fill="none" stroke="var(--dourado)" stroke-linecap="round" stroke-width="3">
+        <path d="M 72 11.89 A 44 44 0 0 1 92.5 61.39"/>
       </g>
-      <!-- Nota oitava (dourada) maior, posicionada à direita do centro -->
-      <g fill="var(--dourado)">
-        <ellipse cx="49" cy="63" rx="7" ry="5" transform="rotate(-25 49 63)"/>
-      </g>
-      <g fill="none" stroke="var(--dourado)" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M 55 60.5 L 55 22"/>
-      </g>
-      <g fill="var(--dourado)">
-        <path d="M 55 22 Q 70 24 74 36 Q 73 30 65 31 Q 60 33 55 31 Z"/>
+      <!-- Nota oitava (dourada) — cabeça em (45, 58), rx=7, ry=5, tilt -25° -->
+      <g fill="var(--dourado)" stroke="var(--dourado)" stroke-linejoin="round">
+        <ellipse cx="45" cy="58" rx="7" ry="5" transform="rotate(-25 45 58)"/>
+        <!-- Haste fina à direita da cabeça -->
+        <rect x="50.4" y="30" width="1.6" height="28"/>
+        <!-- Bandeirola: gancho elegante com curva externa convexa + interna côncava -->
+        <path d="M 51.2 30
+                 C 56 31.5, 60 34, 61.5 38
+                 C 62.8 41.5, 61.8 44.5, 59 46.5
+                 C 60.8 44, 60.5 41.5, 58.5 39.2
+                 C 56.3 36.8, 53.5 35, 51.2 34.2 Z"
+              stroke-width="0.3"/>
       </g>
     </symbol>
     <symbol id="ornament" viewBox="0 0 24 24">
@@ -1880,8 +1883,9 @@ import * as THREE from 'three';
     });
 
     // ===== ARCOS DE ONDA SONORA (bordô, 10:30 → 4:30, exato 180°, COM round caps) =====
-    const arcRadii = [1.75, 2.35, 2.95];
-    const tubeR = 0.095;
+    // Proporção 30:37:44 da SVG = 0.68:0.84:1
+    const arcRadii = [2.05, 2.55, 3.0];
+    const tubeR = 0.085;
     const capGeo = new THREE.SphereGeometry(tubeR, 20, 16);
 
     arcRadii.forEach((r) => {
@@ -1907,9 +1911,9 @@ import * as THREE from 'three';
       group.add(arcGroup);
     });
 
-    // ===== ARCO DOURADO (4h → 1h, 90°, COM round caps) =====
-    const dArcAngle = Math.PI / 2;
-    const dR = 2.65;
+    // ===== ARCO DOURADO (3:30 → 1h, ~75°, COM round caps) =====
+    const dArcAngle = Math.PI * 75 / 180; // 75°
+    const dR = 3.0;
     const dArcGroup = new THREE.Group();
     const dTorus = new THREE.TorusGeometry(dR, tubeR, 16, 80, dArcAngle);
     dArcGroup.add(new THREE.Mesh(dTorus, doradoMat));
@@ -1922,8 +1926,8 @@ import * as THREE from 'three';
     dEndCap.position.set(dR * Math.cos(dArcAngle), dR * Math.sin(dArcAngle), 0);
     dArcGroup.add(dEndCap);
 
-    // Rotação -30° põe início em 4h; sweep CCW até 1h
-    dArcGroup.rotation.z = -Math.PI / 6;
+    // Rotação -15° (3:30 = -45° clock CW from 12 = math -45° from +X SVG... ajustando) põe início em 3:30
+    dArcGroup.rotation.z = -Math.PI / 12; // -15° put start at ~3:30
     group.add(dArcGroup);
 
     // ===== NOTA MUSICAL (oitava) — proporções refinadas pra match com a referência =====
