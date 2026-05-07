@@ -1159,12 +1159,15 @@ footer::before {
       <g fill="none" stroke="var(--dourado)" stroke-linecap="round" stroke-width="3.5">
         <path d="M 65 24.02 A 30 30 0 0 1 75.98 65"/>
       </g>
-      <!-- Nota oitava (dourada) no espaço aberto -->
+      <!-- Nota oitava (dourada) no espaço aberto, proporção refinada -->
       <g fill="var(--dourado)">
-        <ellipse cx="50" cy="58" rx="7" ry="5" transform="rotate(-22 50 58)"/>
+        <ellipse cx="46" cy="62" rx="5.5" ry="4" transform="rotate(-25 46 62)"/>
       </g>
-      <g fill="none" stroke="var(--dourado)" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M 56 56 L 56 30 Q 71 32 74 45"/>
+      <g fill="none" stroke="var(--dourado)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M 51 60 L 51 25"/>
+      </g>
+      <g fill="var(--dourado)">
+        <path d="M 51 25 Q 64 27 68 38 Q 67 32 60 33 Q 56 35 51 33 Z"/>
       </g>
     </symbol>
     <symbol id="ornament" viewBox="0 0 24 24">
@@ -1923,14 +1926,14 @@ import * as THREE from 'three';
     dArcGroup.rotation.z = -Math.PI / 6;
     group.add(dArcGroup);
 
-    // ===== NOTA MUSICAL (oitava) =====
+    // ===== NOTA MUSICAL (oitava) — proporções refinadas pra match com a referência =====
     const note = new THREE.Group();
 
-    // Cabeça (elipse inclinada, sólida, extrudada)
+    // Cabeça (elipse menor e mais inclinada, sólida)
     const headShape = new THREE.Shape();
     const segs = 64;
-    const tilt = -22 * Math.PI / 180;
-    const a = 0.55, b = 0.4;
+    const tilt = -25 * Math.PI / 180;
+    const a = 0.42, b = 0.3; // menor que antes (era 0.55, 0.4)
     for (let i = 0; i <= segs; i++) {
       const t = (i / segs) * Math.PI * 2;
       const lx = a * Math.cos(t);
@@ -1941,41 +1944,46 @@ import * as THREE from 'three';
       else headShape.lineTo(x, y);
     }
     const headGeo = new THREE.ExtrudeGeometry(headShape, {
-      depth: 0.34, bevelEnabled: true,
-      bevelThickness: 0.04, bevelSize: 0.025, bevelSegments: 4
+      depth: 0.28, bevelEnabled: true,
+      bevelThickness: 0.03, bevelSize: 0.02, bevelSegments: 4
     });
     const headMesh = new THREE.Mesh(headGeo, doradoMat);
-    headMesh.position.set(0, -0.42, -0.17);
+    headMesh.position.set(-0.05, -0.55, -0.14);
     note.add(headMesh);
 
-    // Haste (caixa fina e alta, com leve bisel)
+    // Haste (mais alta e mais fina)
     const stemShape = new THREE.Shape();
-    const sw = 0.07, sh = 0.85; // half-width, half-height
+    const sw = 0.055, sh = 1.15; // half-width, half-height (antes era 0.07, 0.85)
     stemShape.moveTo(-sw, -sh);
     stemShape.lineTo(sw, -sh);
     stemShape.lineTo(sw, sh);
     stemShape.lineTo(-sw, sh);
     stemShape.closePath();
     const stemGeo = new THREE.ExtrudeGeometry(stemShape, {
-      depth: 0.28, bevelEnabled: true,
-      bevelThickness: 0.015, bevelSize: 0.012, bevelSegments: 2
+      depth: 0.22, bevelEnabled: true,
+      bevelThickness: 0.012, bevelSize: 0.01, bevelSegments: 2
     });
     const stemMesh = new THREE.Mesh(stemGeo, doradoMat);
-    stemMesh.position.set(0.46, 0.45, -0.14);
+    stemMesh.position.set(0.32, 0.42, -0.11);
     note.add(stemMesh);
 
-    // Bandeirola (curva como folha curvada à direita do topo da haste)
+    // Bandeirola (forma de gancho/comma elegante, não mais teardrop)
+    // Ponto inicial no topo da haste, curva pra cima-direita, pico no upper-right, desce com curva interna mais funda terminando num ponto baixo-direita
     const flagShape = new THREE.Shape();
-    flagShape.moveTo(0.46, 1.32);
-    flagShape.bezierCurveTo(1.25, 1.15, 1.5, 0.55, 0.85, 0.0);
-    flagShape.bezierCurveTo(1.2, 0.55, 1.0, 1.05, 0.46, 1.0);
+    flagShape.moveTo(0.375, 1.57); // topo direito da haste
+    // Borda externa: curva ampla pra direita-cima, depois desce até um ponto na direita-baixo
+    flagShape.bezierCurveTo(0.95, 1.55, 1.35, 1.05, 1.15, 0.35);
+    flagShape.bezierCurveTo(1.05, 0.55, 0.85, 0.65, 0.6, 0.55); // ponta inferior
+    // Borda interna: volta pra cima junto à haste
+    flagShape.bezierCurveTo(0.85, 0.85, 0.7, 1.15, 0.265, 1.15);
+    flagShape.lineTo(0.265, 1.57); // fecha encostando no topo da haste
     flagShape.closePath();
     const flagGeo = new THREE.ExtrudeGeometry(flagShape, {
-      depth: 0.26, bevelEnabled: true,
-      bevelThickness: 0.03, bevelSize: 0.02, bevelSegments: 3
+      depth: 0.2, bevelEnabled: true,
+      bevelThickness: 0.022, bevelSize: 0.015, bevelSegments: 3
     });
     const flagMesh = new THREE.Mesh(flagGeo, doradoMat);
-    flagMesh.position.set(0, 0, -0.13);
+    flagMesh.position.set(0, 0, -0.1);
     note.add(flagMesh);
 
     group.add(note);
