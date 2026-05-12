@@ -414,24 +414,34 @@ nav {
   touch-action: none;
 }
 .hero-3d-scene.grabbing { cursor: grabbing; }
-.hero-3d-img {
+
+.hero-3d-stack {
+  position: relative;
   width: 92%;
   height: 92%;
-  object-fit: contain;
   transform-style: preserve-3d;
   will-change: transform;
-  filter:
-    drop-shadow(0 18px 32px rgba(84, 12, 24, 0.25))
-    drop-shadow(0 6px 12px rgba(84, 12, 24, 0.15));
+}
+.hero-3d-stack img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
   user-select: none;
   -webkit-user-drag: none;
-  transition: filter 0.5s ease;
+  /* cada layer fica em Z diferente — JS coloca translateZ */
 }
-[data-theme="dark"] .hero-3d-img {
+.hero-3d-stack img:first-child {
+  filter: drop-shadow(0 18px 32px rgba(84, 12, 24, 0.25));
+}
+[data-theme="dark"] .hero-3d-stack img:first-child {
   filter:
     drop-shadow(0 0 24px rgba(255, 122, 46, 0.45))
-    drop-shadow(0 18px 32px rgba(255, 90, 31, 0.25))
-    brightness(1.1) saturate(1.2);
+    drop-shadow(0 18px 32px rgba(255, 90, 31, 0.25));
+}
+[data-theme="dark"] .hero-3d-stack img {
+  filter: brightness(1.05) saturate(1.15);
 }
 .hero-3d-hint {
   position: absolute;
@@ -1455,7 +1465,9 @@ footer::before {
     <div class="hero-3d-wrap">
       <div class="hero-3d-glow"></div>
       <div class="hero-3d-scene">
-        <img src="images/logo.png" alt="MusicArt" class="hero-3d-img" id="hero3d">
+        <div class="hero-3d-stack" id="hero3d">
+          <!-- Stack de 24 layers da logo em Z = espessura real -->
+        </div>
       </div>
       <div class="hero-3d-hint">↻ arraste pra girar</div>
     </div>
@@ -1843,29 +1855,42 @@ createParticles('particles-alunos', 10);
 })();
 </script>
 
-<!-- HERO 3D — CSS perspective + drag (logo PNG sempre nítida) -->
+<!-- HERO 3D — Stack de PNGs em Z = espessura real visível de qualquer ângulo -->
 <script>
 (function () {
   const scene = document.querySelector('.hero-3d-scene');
-  const img = document.getElementById('hero3d');
-  if (!scene || !img) return;
+  const stack = document.getElementById('hero3d');
+  if (!scene || !stack) return;
 
-  let rotY = -12, rotX = 6;
-  let velY = 0.08; // graus por frame
+  // Gerar N layers da logo em Z escalonado = espessura visível
+  const LAYERS = 30;
+  const TOTAL_DEPTH = 14; // pixels de espessura total
+  const step = TOTAL_DEPTH / (LAYERS - 1);
+  for (let i = 0; i < LAYERS; i++) {
+    const img = document.createElement('img');
+    img.src = 'images/logo.png';
+    img.alt = '';
+    img.draggable = false;
+    img.style.transform = `translateZ(${(i - (LAYERS-1)/2) * step}px)`;
+    stack.appendChild(img);
+  }
+
+  let rotY = -18, rotX = 8;
+  let velY = 0.18; // graus por frame — mais visível
   let isDragging = false;
   let lastX = 0, lastY = 0;
   let pausedUntil = 0;
 
   function applyTransform() {
-    img.style.transform = `rotateX(${rotX}deg) rotateY(${rotY}deg)`;
+    stack.style.transform = `rotateX(${rotX}deg) rotateY(${rotY}deg)`;
   }
   applyTransform();
 
   function tick() {
     if (!isDragging && performance.now() > pausedUntil) {
       rotY += velY;
-      // Limita rotY entre -25 e 25 graus pra criar um wobble suave (não rotação completa)
-      if (rotY > 25 || rotY < -25) velY *= -1;
+      // Wobble entre -35° e +35° — suficiente pra mostrar espessura sem ficar edge-on
+      if (rotY > 35 || rotY < -35) velY *= -1;
     }
     applyTransform();
     requestAnimationFrame(tick);
@@ -1881,7 +1906,6 @@ createParticles('particles-alunos', 10);
     if (!isDragging) return;
     rotY += (x - lastX) * 0.4;
     rotX -= (y - lastY) * 0.3;
-    rotY = Math.max(-180, Math.min(180, rotY));
     rotX = Math.max(-45, Math.min(45, rotX));
     lastX = x; lastY = y;
   }
