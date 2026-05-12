@@ -1888,36 +1888,27 @@ import * as THREE from 'three';
       tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
     });
 
-    // Textura como displacement map (cria relevo real onde tem pixels coloridos)
+    // Textura também como mapa de altura (mesma PNG)
     const dispTexture = textureLoader.load('images/logo.png');
 
+    // Material simples — cores ricas, sem processo metálico que desbota
     logoMaterial = new THREE.MeshStandardMaterial({
       map: texture,
-      alphaMap: texture,
       transparent: true,
-      alphaTest: 0.1,
+      alphaTest: 0.5, // alphaTest mais alto pra não criar bordas semi-transparentes
       side: THREE.DoubleSide,
-      metalness: 0.5,
-      roughness: 0.25,
+      metalness: 0,    // sem reflexo metálico
+      roughness: 0.7,  // fosco, cores reais aparecem
       displacementMap: dispTexture,
-      displacementScale: 0.4,
-      bumpMap: dispTexture,
-      bumpScale: 0.15
+      displacementScale: 0.3,
+      displacementBias: 0
     });
 
-    // Plano com alta densidade de polígonos pra displacement funcionar bem
+    // Plano único com alta resolução de malha pra displacement suave
     const W = 5.2, H = 5.0;
-    const planeGeo = new THREE.PlaneGeometry(W, H, 256, 256);
+    const planeGeo = new THREE.PlaneGeometry(W, H, 300, 300);
     const planeMesh = new THREE.Mesh(planeGeo, logoMaterial);
     group.add(planeMesh);
-
-    // Plano espelho atrás (back face) com mesma textura
-    const backGeo = new THREE.PlaneGeometry(W, H, 256, 256);
-    const backMat = logoMaterial.clone();
-    backMat.displacementScale = -0.4; // espelhado pra trás
-    const backMesh = new THREE.Mesh(backGeo, backMat);
-    backMesh.rotation.y = Math.PI; // vira pra trás
-    group.add(backMesh);
 
     return group;
   }
