@@ -1890,6 +1890,7 @@ import * as THREE from 'three';
 
     const dispTexture = textureLoader.load('images/logo.png');
 
+    // Material principal — cores cheias, alphaTest alto pra zerar bordas
     logoMaterial = new THREE.MeshStandardMaterial({
       map: texture,
       transparent: true,
@@ -1898,25 +1899,35 @@ import * as THREE from 'three';
       metalness: 0,
       roughness: 0.6,
       displacementMap: dispTexture,
-      displacementScale: 1.0, // extrusão forte
+      displacementScale: 0.6,
       displacementBias: 0
     });
 
     const W = 5.2, H = 5.0;
-    const SUB = 380;
+    const SUB = 320;
 
-    // UM plano só na frente com displacement forte = relevo grosso
-    const frontGeo = new THREE.PlaneGeometry(W, H, SUB, SUB);
-    const frontMesh = new THREE.Mesh(frontGeo, logoMaterial);
-    group.add(frontMesh);
+    // 5 camadas empilhadas em Z = volume sólido visível de qualquer ângulo
+    const layerCount = 5;
+    const layerSpacing = 0.08;
+    for (let i = 0; i < layerCount; i++) {
+      const offset = (i - (layerCount - 1) / 2) * layerSpacing;
+      const geo = new THREE.PlaneGeometry(W, H, SUB, SUB);
+      const mat = logoMaterial.clone();
+      const center = (layerCount - 1) / 2;
+      const dist = Math.abs(i - center);
+      mat.displacementScale = 0.6 - dist * 0.05;
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.position.z = offset;
+      group.add(mesh);
+    }
 
-    // UM plano atrás espelhado com displacement INVERTIDO = fecha o fundo
-    // Os dois juntos formam um "volume" 3D unificado, não duas cópias
+    // Espelho atrás — fecha o fundo do volume
     const backGeo = new THREE.PlaneGeometry(W, H, SUB, SUB);
     const backMat = logoMaterial.clone();
-    backMat.displacementScale = -1.0;
+    backMat.displacementScale = -0.6;
     const backMesh = new THREE.Mesh(backGeo, backMat);
     backMesh.rotation.y = Math.PI;
+    backMesh.position.z = -((layerCount - 1) / 2) * layerSpacing - 0.05;
     group.add(backMesh);
 
     return group;
