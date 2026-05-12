@@ -402,44 +402,18 @@ nav {
   0%, 100% { opacity: 0.6; transform: scale(1); }
   50% { opacity: 1; transform: scale(1.08); }
 }
-.hero-3d-scene {
+.hero-3d {
   position: relative;
   width: 100%; height: 100%;
-  z-index: 2;
-  perspective: 1400px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   cursor: grab;
+  z-index: 2;
   touch-action: none;
 }
-.hero-3d-scene.grabbing { cursor: grabbing; }
-
-.hero-3d-stack {
-  position: relative;
-  width: 92%;
-  height: 92%;
-  transform-style: preserve-3d;
-  will-change: transform;
-}
-.hero-3d-stack img {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  user-select: none;
-  -webkit-user-drag: none;
-  /* mix-blend-mode darken = overlapping colors stay rich, sem branco entre layers */
-  mix-blend-mode: darken;
-}
-.hero-3d-stack {
-  filter: drop-shadow(0 22px 36px rgba(84, 12, 24, 0.3));
-}
-[data-theme="dark"] .hero-3d-stack {
-  filter:
-    drop-shadow(0 0 32px rgba(255, 122, 46, 0.5))
-    drop-shadow(0 22px 36px rgba(255, 90, 31, 0.3));
+.hero-3d.grabbing { cursor: grabbing; }
+.hero-3d canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
 }
 .hero-3d-hint {
   position: absolute;
@@ -1462,11 +1436,7 @@ footer::before {
   <div class="hero-visual">
     <div class="hero-3d-wrap">
       <div class="hero-3d-glow"></div>
-      <div class="hero-3d-scene">
-        <div class="hero-3d-stack" id="hero3d">
-          <!-- Stack de 24 layers da logo em Z = espessura real -->
-        </div>
-      </div>
+      <div class="hero-3d" id="hero3d"></div>
       <div class="hero-3d-hint">↻ arraste pra girar</div>
     </div>
     <div class="hero-stat s1">
@@ -1853,72 +1823,125 @@ createParticles('particles-alunos', 10);
 })();
 </script>
 
-<!-- HERO 3D — Stack de PNGs em Z = espessura real visível de qualquer ângulo -->
-<script>
-(function () {
-  const scene = document.querySelector('.hero-3d-scene');
-  const stack = document.getElementById('hero3d');
-  if (!scene || !stack) return;
+<!-- HERO 3D — Three.js extrusão real dos paths SVG da logo -->
+<script type="module">
+import * as THREE from 'three';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 
-  // Gerar 18 layers da logo em Z (menos layers, gap maior pra menos bandas)
-  const LAYERS = 18;
-  const TOTAL_DEPTH = 18;
-  const step = TOTAL_DEPTH / (LAYERS - 1);
-  for (let i = 0; i < LAYERS; i++) {
-    const img = document.createElement('img');
-    img.src = 'images/logo.png';
-    img.alt = '';
-    img.draggable = false;
-    img.style.transform = `translateZ(${(i - (LAYERS-1)/2) * step}px)`;
-    stack.appendChild(img);
+(async function () {
+  const container = document.getElementById('hero3d');
+  if (!container) return;
+
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(40, 1, 0.1, 100);
+  camera.position.set(0, 0, 11);
+
+  const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.15;
+  container.appendChild(renderer.domElement);
+
+  // Environment map procedural pra metalness aparecer com cor
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+
+  // Lights
+  scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+  const key = new THREE.DirectionalLight(0xffffff, 1.3);
+  key.position.set(3, 4, 6);
+  scene.add(key);
+  const fill = new THREE.DirectionalLight(0xffd9a0, 0.5);
+  fill.position.set(-4, 2, 4);
+  scene.add(fill);
+
+  // Materiais — solid metal, cores vivas
+  const bordoMat = new THREE.MeshStandardMaterial({
+    color: 0x540c18, metalness: 0.45, roughness: 0.35
+  });
+  const doradoMat = new THREE.MeshStandardMaterial({
+    color: 0xc69444, metalness: 0.65, roughness: 0.25
+  });
+
+  // Carregar paths extraídos do PNG via OpenCV
+  const data = await (await fetch('images/logo_paths.json')).json();
+
+  const logoGroup = new THREE.Group();
+
+  function buildShapes(paths, material) {
+    paths.forEach(pts => {
+      if (pts.length < 3) return;
+      const shape = new THREE.Shape();
+      const stride = Math.max(1, Math.floor(pts.length / 90));
+      const v2pts = [];
+      for (let i = 0; i < pts.length; i += stride) {
+        v2pts.push(new THREE.Vector2(pts[i][0], pts[i][1]));
+      }
+      if (v2pts[0].distanceTo(v2pts[v2pts.length-1]) > 0.01) v2pts.push(v2pts[0].clone());
+      shape.moveTo(v2pts[0].x, v2pts[0].y);
+      shape.splineThru(v2pts.slice(1));
+
+      const geo = new THREE.ExtrudeGeometry(shape, {
+        depth: 0.4,
+        bevelEnabled: true,
+        bevelThickness: 0.015,
+        bevelSize: 0.015,
+        bevelSegments: 2,
+        curveSegments: 64
+      });
+      geo.translate(0, 0, -0.2);
+      geo.computeVertexNormals();
+      logoGroup.add(new THREE.Mesh(geo, material));
+    });
   }
 
-  let rotY = 0, rotX = 6;
-  const velY = 0.5; // graus por frame = rotação 360° contínua
+  buildShapes(data.bordo.paths, bordoMat);
+  buildShapes(data.dourado.paths, doradoMat);
+  scene.add(logoGroup);
+
+  // Drag + rotação automática LENTA, 360° contínuo
+  let rotY = -0.2, rotX = 0.08;
+  const velY = 0.004; // SLOW — full rotation em ~26s
   let isDragging = false;
   let lastX = 0, lastY = 0;
   let pausedUntil = 0;
 
-  function applyTransform() {
-    stack.style.transform = `rotateX(${rotX}deg) rotateY(${rotY}deg)`;
-  }
-  applyTransform();
-
-  function tick() {
-    if (!isDragging && performance.now() > pausedUntil) {
-      rotY += velY; // sempre cresce = rotação 360° contínua
-      if (rotY >= 360) rotY -= 360;
-    }
-    applyTransform();
-    requestAnimationFrame(tick);
-  }
-  tick();
-
-  function onDown(x, y) {
-    isDragging = true;
-    lastX = x; lastY = y;
-    scene.classList.add('grabbing');
-  }
+  function onDown(x, y) { isDragging = true; lastX = x; lastY = y; container.classList.add('grabbing'); }
   function onMove(x, y) {
     if (!isDragging) return;
-    rotY += (x - lastX) * 0.5;
-    rotX -= (y - lastY) * 0.3;
-    rotX = Math.max(-45, Math.min(45, rotX));
+    rotY += (x - lastX) * 0.008;
+    rotX += (y - lastY) * 0.005;
+    rotX = Math.max(-0.6, Math.min(0.6, rotX));
     lastX = x; lastY = y;
   }
-  function onUp() {
-    if (!isDragging) return;
-    isDragging = false;
-    scene.classList.remove('grabbing');
-    pausedUntil = performance.now() + 1500;
-  }
+  function onUp() { if (!isDragging) return; isDragging = false; container.classList.remove('grabbing'); pausedUntil = performance.now() + 1500; }
 
-  scene.addEventListener('mousedown', e => { e.preventDefault(); onDown(e.clientX, e.clientY); });
+  container.addEventListener('mousedown', e => { e.preventDefault(); onDown(e.clientX, e.clientY); });
   window.addEventListener('mousemove', e => onMove(e.clientX, e.clientY));
   window.addEventListener('mouseup', onUp);
-  scene.addEventListener('touchstart', e => onDown(e.touches[0].clientX, e.touches[0].clientY), { passive: true });
+  container.addEventListener('touchstart', e => onDown(e.touches[0].clientX, e.touches[0].clientY), { passive: true });
   window.addEventListener('touchmove', e => { if (isDragging) { e.preventDefault(); onMove(e.touches[0].clientX, e.touches[0].clientY); } }, { passive: false });
   window.addEventListener('touchend', onUp);
+
+  function onResize() {
+    const w = container.clientWidth, h = container.clientHeight;
+    if (!w || !h) return;
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+    renderer.setSize(w, h, false);
+  }
+  window.addEventListener('resize', onResize);
+  onResize();
+
+  function animate() {
+    requestAnimationFrame(animate);
+    if (!isDragging && performance.now() > pausedUntil) rotY += velY;
+    logoGroup.rotation.y = rotY;
+    logoGroup.rotation.x = rotX;
+    renderer.render(scene, camera);
+  }
+  animate();
 })();
 </script>
 
