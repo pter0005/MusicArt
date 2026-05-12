@@ -1890,45 +1890,24 @@ import * as THREE from 'three';
 
     const dispTexture = textureLoader.load('images/logo.png');
 
-    // Material principal — cores cheias, alphaTest alto pra zerar bordas
+    // Material simples — cores ricas, sem processo metálico que desbota
     logoMaterial = new THREE.MeshStandardMaterial({
       map: texture,
       transparent: true,
-      alphaTest: 0.7,
+      alphaTest: 0.5,
       side: THREE.DoubleSide,
       metalness: 0,
-      roughness: 0.6,
+      roughness: 0.7,
       displacementMap: dispTexture,
-      displacementScale: 0.6,
+      displacementScale: 0.3,
       displacementBias: 0
     });
 
+    // Plano único com alta resolução de malha pra displacement suave
     const W = 5.2, H = 5.0;
-    const SUB = 320;
-
-    // 5 camadas empilhadas em Z = volume sólido visível de qualquer ângulo
-    const layerCount = 5;
-    const layerSpacing = 0.08;
-    for (let i = 0; i < layerCount; i++) {
-      const offset = (i - (layerCount - 1) / 2) * layerSpacing;
-      const geo = new THREE.PlaneGeometry(W, H, SUB, SUB);
-      const mat = logoMaterial.clone();
-      const center = (layerCount - 1) / 2;
-      const dist = Math.abs(i - center);
-      mat.displacementScale = 0.6 - dist * 0.05;
-      const mesh = new THREE.Mesh(geo, mat);
-      mesh.position.z = offset;
-      group.add(mesh);
-    }
-
-    // Espelho atrás — fecha o fundo do volume
-    const backGeo = new THREE.PlaneGeometry(W, H, SUB, SUB);
-    const backMat = logoMaterial.clone();
-    backMat.displacementScale = -0.6;
-    const backMesh = new THREE.Mesh(backGeo, backMat);
-    backMesh.rotation.y = Math.PI;
-    backMesh.position.z = -((layerCount - 1) / 2) * layerSpacing - 0.05;
-    group.add(backMesh);
+    const planeGeo = new THREE.PlaneGeometry(W, H, 300, 300);
+    const planeMesh = new THREE.Mesh(planeGeo, logoMaterial);
+    group.add(planeMesh);
 
     return group;
   }
