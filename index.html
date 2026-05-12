@@ -402,18 +402,36 @@ nav {
   0%, 100% { opacity: 0.6; transform: scale(1); }
   50% { opacity: 1; transform: scale(1.08); }
 }
-.hero-3d {
+.hero-3d-scene {
   position: relative;
   width: 100%; height: 100%;
-  cursor: grab;
   z-index: 2;
+  perspective: 1400px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: grab;
   touch-action: none;
 }
-.hero-3d.grabbing { cursor: grabbing; }
-.hero-3d canvas {
-  display: block;
-  width: 100% !important;
-  height: 100% !important;
+.hero-3d-scene.grabbing { cursor: grabbing; }
+.hero-3d-img {
+  width: 92%;
+  height: 92%;
+  object-fit: contain;
+  transform-style: preserve-3d;
+  will-change: transform;
+  filter:
+    drop-shadow(0 18px 32px rgba(84, 12, 24, 0.25))
+    drop-shadow(0 6px 12px rgba(84, 12, 24, 0.15));
+  user-select: none;
+  -webkit-user-drag: none;
+  transition: filter 0.5s ease;
+}
+[data-theme="dark"] .hero-3d-img {
+  filter:
+    drop-shadow(0 0 24px rgba(255, 122, 46, 0.45))
+    drop-shadow(0 18px 32px rgba(255, 90, 31, 0.25))
+    brightness(1.1) saturate(1.2);
 }
 .hero-3d-hint {
   position: absolute;
@@ -1436,7 +1454,9 @@ footer::before {
   <div class="hero-visual">
     <div class="hero-3d-wrap">
       <div class="hero-3d-glow"></div>
-      <div class="hero-3d" id="hero3d"></div>
+      <div class="hero-3d-scene">
+        <img src="images/logo.png" alt="MusicArt" class="hero-3d-img" id="hero3d">
+      </div>
       <div class="hero-3d-hint">↻ arraste pra girar</div>
     </div>
     <div class="hero-stat s1">
@@ -1823,339 +1843,61 @@ createParticles('particles-alunos', 10);
 })();
 </script>
 
-<!-- HERO 3D — Logo MusicArt em 3D (Three.js) -->
-<script type="module">
-import * as THREE from 'three';
-import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-
+<!-- HERO 3D — CSS perspective + drag (logo PNG sempre nítida) -->
+<script>
 (function () {
-  const container = document.getElementById('hero3d');
-  if (!container) return;
+  const scene = document.querySelector('.hero-3d-scene');
+  const img = document.getElementById('hero3d');
+  if (!scene || !img) return;
 
-  const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(40, 1, 0.1, 100);
-  camera.position.set(0, 0, 10);
-
-  const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-  renderer.outputColorSpace = THREE.SRGBColorSpace;
-  renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.2;
-  container.appendChild(renderer.domElement);
-
-  // Environment map procedural pra metalness funcionar e cores aparecerem
-  const pmrem = new THREE.PMREMGenerator(renderer);
-  scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
-
-  // Lights
-  const ambient = new THREE.AmbientLight(0xffffff, 0.5);
-  scene.add(ambient);
-  const key = new THREE.DirectionalLight(0xffffff, 1.5);
-  key.position.set(3, 4, 6);
-  scene.add(key);
-  const fill = new THREE.DirectionalLight(0xffd9a0, 0.7);
-  fill.position.set(-4, 2, 4);
-  scene.add(fill);
-  const rim = new THREE.PointLight(0xffaa44, 1.6, 20, 1.5);
-  rim.position.set(0, -2, -2);
-  scene.add(rim);
-
-  function getPalette() {
-    const dark = document.documentElement.getAttribute('data-theme') === 'dark';
-    return dark
-      ? {
-          dourado: 0xffaa33, dourEm: 0xff7a00, dourEmI: 0.65,
-          bordo: 0xff5a1f, bordEm: 0xff3a00, bordEmI: 0.55,
-          metal: 0.4, rough: 0.3,
-          rim: 0xff8033, rimI: 2.4, ambient: 0.35
-        }
-      : {
-          dourado: 0xc69444, dourEm: 0xc69444, dourEmI: 0.16,
-          bordo: 0x540c18, bordEm: 0x540c18, bordEmI: 0.08,
-          metal: 0.55, rough: 0.32,
-          rim: 0xffaa44, rimI: 1.5, ambient: 0.5
-        };
-  }
-
-  let logo = null;
-  let doradoMat = null;
-  let bordoMat = null;
-  let logoMaterial = null;
-
-  function buildLogo() {
-    const group = new THREE.Group();
-    return group; // Será preenchido pela função async carregadora
-  }
-
-  async function loadAndBuildExtrudedLogo(group) {
-    const response = await fetch('images/logo_paths.json');
-    const data = await response.json();
-
-    // Material metal sólido sem clearcoat (que dava aspecto plástico/massinha)
-    const bordoMat = new THREE.MeshPhysicalMaterial({
-      color: 0x6d1020,
-      metalness: 0.55,
-      roughness: 0.32,
-      side: THREE.DoubleSide
-    });
-    const doradoMat = new THREE.MeshPhysicalMaterial({
-      color: 0xd9a85a,
-      metalness: 0.75,
-      roughness: 0.24,
-      side: THREE.DoubleSide
-    });
-
-    function pathsToMeshes(paths, material) {
-      paths.forEach(pts => {
-        if (pts.length < 3) return;
-        const shape = new THREE.Shape();
-        const stride = Math.max(1, Math.floor(pts.length / 100));
-        const v2pts = [];
-        for (let i = 0; i < pts.length; i += stride) {
-          v2pts.push(new THREE.Vector2(pts[i][0], pts[i][1]));
-        }
-        if (v2pts[0].distanceTo(v2pts[v2pts.length-1]) > 0.01) {
-          v2pts.push(v2pts[0].clone());
-        }
-        shape.moveTo(v2pts[0].x, v2pts[0].y);
-        shape.splineThru(v2pts.slice(1));
-        // Bevel MÍNIMO + depth MAIOR = arestas cortadas, paredes verticais altas
-        const geo = new THREE.ExtrudeGeometry(shape, {
-          depth: 0.5,         // 2x mais alto (era 0.28)
-          bevelEnabled: true,
-          bevelThickness: 0.008, // 5x menor (era 0.04)
-          bevelSize: 0.008,      // 4x menor (era 0.03)
-          bevelSegments: 1,      // sem suavização (era 8)
-          curveSegments: 96       // mais segmentos pra curva top/bottom
-        });
-        geo.translate(0, 0, -0.25);
-        geo.computeVertexNormals();
-        const mesh = new THREE.Mesh(geo, material);
-        group.add(mesh);
-      });
-    }
-
-    pathsToMeshes(data.bordo.paths, bordoMat);
-    pathsToMeshes(data.dourado.paths, doradoMat);
-
-    // Guardar refs pra applyPalette
-    logoMaterial = bordoMat;
-    window._doradoLogoMat = doradoMat;
-  }
-
-  function applyPalette() {
-    const p = getPalette();
-    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-    function paintMat(mat, baseColorHex, darkColorHex, darkEmissive) {
-      if (!mat) return;
-      if (isDark) {
-        mat.color.setHex(darkColorHex);
-        mat.emissive.setHex(darkEmissive);
-        mat.emissiveIntensity = 0.5;
-      } else {
-        mat.color.setHex(baseColorHex);
-        mat.emissive.setHex(0x000000);
-        mat.emissiveIntensity = 0;
-      }
-      mat.needsUpdate = true;
-    }
-    paintMat(logoMaterial, 0x540c18, 0xff5a1f, 0xff3a00);
-    paintMat(window._doradoLogoMat, 0xc69444, 0xffaa33, 0xff7a00);
-    rim.color.setHex(p.rim);
-    rim.intensity = p.rimI;
-    ambient.intensity = p.ambient;
-  }
-
-  // (Antiga função buildLogo geométrica — mantida pra fallback) ====
-  function _buildLogoOLD() {
-    const group = new THREE.Group();
-    const p = getPalette();
-
-    doradoMat = new THREE.MeshStandardMaterial({
-      color: p.dourado, metalness: p.metal, roughness: p.rough,
-      emissive: p.dourEm, emissiveIntensity: p.dourEmI
-    });
-    bordoMat = new THREE.MeshStandardMaterial({
-      color: p.bordo, metalness: p.metal * 0.85, roughness: p.rough + 0.05,
-      emissive: p.bordEm, emissiveIntensity: p.bordEmI
-    });
-
-    // ===== ARCOS DE ONDA SONORA (bordô, 10:30 → 4:30, exato 180°, COM round caps) =====
-    // Proporção 30:37:44 da SVG = 0.68:0.84:1
-    const arcRadii = [2.05, 2.55, 3.0];
-    const tubeR = 0.085;
-    const capGeo = new THREE.SphereGeometry(tubeR, 20, 16);
-
-    arcRadii.forEach((r) => {
-      const arcAngle = Math.PI; // 180° exato (10:30 → 4:30)
-      const arcGroup = new THREE.Group();
-
-      // Tubo torus
-      const torus = new THREE.TorusGeometry(r, tubeR, 16, 120, arcAngle);
-      arcGroup.add(new THREE.Mesh(torus, bordoMat));
-
-      // Round cap inicial (em 0° local antes da rotação)
-      const startCap = new THREE.Mesh(capGeo, bordoMat);
-      startCap.position.set(r, 0, 0);
-      arcGroup.add(startCap);
-
-      // Round cap final (em arcAngle local antes da rotação)
-      const endCap = new THREE.Mesh(capGeo, bordoMat);
-      endCap.position.set(r * Math.cos(arcAngle), r * Math.sin(arcAngle), 0);
-      arcGroup.add(endCap);
-
-      // Rotação 135° CCW põe o início em 10:30; sweep até 4:30
-      arcGroup.rotation.z = Math.PI * 3 / 4;
-      group.add(arcGroup);
-    });
-
-    // ===== ARCO DOURADO (3:30 → 1h, ~75°, COM round caps) =====
-    const dArcAngle = Math.PI * 75 / 180; // 75°
-    const dR = 3.0;
-    const dArcGroup = new THREE.Group();
-    const dTorus = new THREE.TorusGeometry(dR, tubeR, 16, 80, dArcAngle);
-    dArcGroup.add(new THREE.Mesh(dTorus, doradoMat));
-
-    const dStartCap = new THREE.Mesh(capGeo, doradoMat);
-    dStartCap.position.set(dR, 0, 0);
-    dArcGroup.add(dStartCap);
-
-    const dEndCap = new THREE.Mesh(capGeo, doradoMat);
-    dEndCap.position.set(dR * Math.cos(dArcAngle), dR * Math.sin(dArcAngle), 0);
-    dArcGroup.add(dEndCap);
-
-    // Rotação -15° (3:30 = -45° clock CW from 12 = math -45° from +X SVG... ajustando) põe início em 3:30
-    dArcGroup.rotation.z = -Math.PI / 12; // -15° put start at ~3:30
-    group.add(dArcGroup);
-
-    // ===== NOTA MUSICAL (oitava) — proporções refinadas pra match com a referência =====
-    const note = new THREE.Group();
-
-    // Cabeça (elipse menor e mais inclinada, sólida)
-    const headShape = new THREE.Shape();
-    const segs = 64;
-    const tilt = -25 * Math.PI / 180;
-    const a = 0.42, b = 0.3; // menor que antes (era 0.55, 0.4)
-    for (let i = 0; i <= segs; i++) {
-      const t = (i / segs) * Math.PI * 2;
-      const lx = a * Math.cos(t);
-      const ly = b * Math.sin(t);
-      const x = lx * Math.cos(tilt) - ly * Math.sin(tilt);
-      const y = lx * Math.sin(tilt) + ly * Math.cos(tilt);
-      if (i === 0) headShape.moveTo(x, y);
-      else headShape.lineTo(x, y);
-    }
-    const headGeo = new THREE.ExtrudeGeometry(headShape, {
-      depth: 0.28, bevelEnabled: true,
-      bevelThickness: 0.03, bevelSize: 0.02, bevelSegments: 4
-    });
-    const headMesh = new THREE.Mesh(headGeo, doradoMat);
-    headMesh.position.set(-0.05, -0.55, -0.14);
-    note.add(headMesh);
-
-    // Haste (mais alta e mais fina)
-    const stemShape = new THREE.Shape();
-    const sw = 0.055, sh = 1.15; // half-width, half-height (antes era 0.07, 0.85)
-    stemShape.moveTo(-sw, -sh);
-    stemShape.lineTo(sw, -sh);
-    stemShape.lineTo(sw, sh);
-    stemShape.lineTo(-sw, sh);
-    stemShape.closePath();
-    const stemGeo = new THREE.ExtrudeGeometry(stemShape, {
-      depth: 0.22, bevelEnabled: true,
-      bevelThickness: 0.012, bevelSize: 0.01, bevelSegments: 2
-    });
-    const stemMesh = new THREE.Mesh(stemGeo, doradoMat);
-    stemMesh.position.set(0.32, 0.42, -0.11);
-    note.add(stemMesh);
-
-    // Bandeirola (forma de gancho/comma elegante, não mais teardrop)
-    // Ponto inicial no topo da haste, curva pra cima-direita, pico no upper-right, desce com curva interna mais funda terminando num ponto baixo-direita
-    const flagShape = new THREE.Shape();
-    flagShape.moveTo(0.375, 1.57); // topo direito da haste
-    // Borda externa: curva ampla pra direita-cima, depois desce até um ponto na direita-baixo
-    flagShape.bezierCurveTo(0.95, 1.55, 1.35, 1.05, 1.15, 0.35);
-    flagShape.bezierCurveTo(1.05, 0.55, 0.85, 0.65, 0.6, 0.55); // ponta inferior
-    // Borda interna: volta pra cima junto à haste
-    flagShape.bezierCurveTo(0.85, 0.85, 0.7, 1.15, 0.265, 1.15);
-    flagShape.lineTo(0.265, 1.57); // fecha encostando no topo da haste
-    flagShape.closePath();
-    const flagGeo = new THREE.ExtrudeGeometry(flagShape, {
-      depth: 0.2, bevelEnabled: true,
-      bevelThickness: 0.022, bevelSize: 0.015, bevelSegments: 3
-    });
-    const flagMesh = new THREE.Mesh(flagGeo, doradoMat);
-    flagMesh.position.set(0, 0, -0.1);
-    note.add(flagMesh);
-
-    group.add(note);
-
-    return group;
-  }
-
-  logo = buildLogo();
-  scene.add(logo);
-  loadAndBuildExtrudedLogo(logo).then(() => applyPalette());
-  applyPalette();
-
-  window.addEventListener('themechange', applyPalette);
-
-  // Drag rotation + auto-spin (lento)
-  let rotY = 0, rotX = -0.05;
-  let velY = 0.0028; // ~10°/s
+  let rotY = -12, rotX = 6;
+  let velY = 0.08; // graus por frame
   let isDragging = false;
   let lastX = 0, lastY = 0;
   let pausedUntil = 0;
 
+  function applyTransform() {
+    img.style.transform = `rotateX(${rotX}deg) rotateY(${rotY}deg)`;
+  }
+  applyTransform();
+
+  function tick() {
+    if (!isDragging && performance.now() > pausedUntil) {
+      rotY += velY;
+      // Limita rotY entre -25 e 25 graus pra criar um wobble suave (não rotação completa)
+      if (rotY > 25 || rotY < -25) velY *= -1;
+    }
+    applyTransform();
+    requestAnimationFrame(tick);
+  }
+  tick();
+
   function onDown(x, y) {
     isDragging = true;
     lastX = x; lastY = y;
-    container.classList.add('grabbing');
+    scene.classList.add('grabbing');
   }
   function onMove(x, y) {
     if (!isDragging) return;
-    rotY += (x - lastX) * 0.008;
-    rotX += (y - lastY) * 0.005;
-    rotX = Math.max(-0.7, Math.min(0.7, rotX));
+    rotY += (x - lastX) * 0.4;
+    rotX -= (y - lastY) * 0.3;
+    rotY = Math.max(-180, Math.min(180, rotY));
+    rotX = Math.max(-45, Math.min(45, rotX));
     lastX = x; lastY = y;
   }
   function onUp() {
     if (!isDragging) return;
     isDragging = false;
-    container.classList.remove('grabbing');
+    scene.classList.remove('grabbing');
     pausedUntil = performance.now() + 1500;
   }
 
-  container.addEventListener('mousedown', e => { e.preventDefault(); onDown(e.clientX, e.clientY); });
+  scene.addEventListener('mousedown', e => { e.preventDefault(); onDown(e.clientX, e.clientY); });
   window.addEventListener('mousemove', e => onMove(e.clientX, e.clientY));
   window.addEventListener('mouseup', onUp);
-  container.addEventListener('touchstart', e => onDown(e.touches[0].clientX, e.touches[0].clientY), { passive: true });
+  scene.addEventListener('touchstart', e => onDown(e.touches[0].clientX, e.touches[0].clientY), { passive: true });
   window.addEventListener('touchmove', e => { if (isDragging) { e.preventDefault(); onMove(e.touches[0].clientX, e.touches[0].clientY); } }, { passive: false });
   window.addEventListener('touchend', onUp);
-
-  function onResize() {
-    const w = container.clientWidth;
-    const h = container.clientHeight;
-    if (!w || !h) return;
-    camera.aspect = w / h;
-    camera.updateProjectionMatrix();
-    renderer.setSize(w, h, false);
-  }
-  window.addEventListener('resize', onResize);
-  onResize();
-
-  function animate() {
-    requestAnimationFrame(animate);
-    if (logo) {
-      if (!isDragging && performance.now() > pausedUntil) {
-        rotY += velY;
-      }
-      logo.rotation.y = rotY;
-      logo.rotation.x = rotX;
-    }
-    renderer.render(scene, camera);
-  }
-  animate();
 })();
 </script>
 
