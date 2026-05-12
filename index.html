@@ -1826,6 +1826,7 @@ createParticles('particles-alunos', 10);
 <!-- HERO 3D — Logo MusicArt em 3D (Three.js) -->
 <script type="module">
 import * as THREE from 'three';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 
 (function () {
   const container = document.getElementById('hero3d');
@@ -1839,8 +1840,12 @@ import * as THREE from 'three';
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.15;
+  renderer.toneMappingExposure = 1.2;
   container.appendChild(renderer.domElement);
+
+  // Environment map procedural pra metalness funcionar e cores aparecerem
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
 
   // Lights
   const ambient = new THREE.AmbientLight(0xffffff, 0.5);
@@ -1886,23 +1891,23 @@ import * as THREE from 'three';
     const response = await fetch('images/logo_paths.json');
     const data = await response.json();
 
-    // Material BRILHANTE — high metalness, low roughness pra reflexo bonito
+    // Material com metalness moderada — cor base aparece + reflexos do envMap
     const bordoMat = new THREE.MeshPhysicalMaterial({
-      color: 0x540c18,
-      metalness: 0.7,
-      roughness: 0.18,
-      clearcoat: 0.6,
-      clearcoatRoughness: 0.1,
-      reflectivity: 0.7,
+      color: 0x6d1020, // bordô levemente mais claro pra metalness não escurecer demais
+      metalness: 0.4,
+      roughness: 0.3,
+      clearcoat: 0.4,
+      clearcoatRoughness: 0.15,
+      reflectivity: 0.5,
       side: THREE.DoubleSide
     });
     const doradoMat = new THREE.MeshPhysicalMaterial({
-      color: 0xc69444,
-      metalness: 0.85,
-      roughness: 0.14,
-      clearcoat: 0.7,
-      clearcoatRoughness: 0.08,
-      reflectivity: 0.85,
+      color: 0xd9a85a, // dourado mais claro pra brilho aparecer
+      metalness: 0.6,
+      roughness: 0.22,
+      clearcoat: 0.5,
+      clearcoatRoughness: 0.1,
+      reflectivity: 0.7,
       side: THREE.DoubleSide
     });
 
