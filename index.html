@@ -430,18 +430,16 @@ nav {
   object-fit: contain;
   user-select: none;
   -webkit-user-drag: none;
-  /* cada layer fica em Z diferente — JS coloca translateZ */
+  /* mix-blend-mode darken = overlapping colors stay rich, sem branco entre layers */
+  mix-blend-mode: darken;
 }
-.hero-3d-stack img:first-child {
-  filter: drop-shadow(0 18px 32px rgba(84, 12, 24, 0.25));
+.hero-3d-stack {
+  filter: drop-shadow(0 22px 36px rgba(84, 12, 24, 0.3));
 }
-[data-theme="dark"] .hero-3d-stack img:first-child {
+[data-theme="dark"] .hero-3d-stack {
   filter:
-    drop-shadow(0 0 24px rgba(255, 122, 46, 0.45))
-    drop-shadow(0 18px 32px rgba(255, 90, 31, 0.25));
-}
-[data-theme="dark"] .hero-3d-stack img {
-  filter: brightness(1.05) saturate(1.15);
+    drop-shadow(0 0 32px rgba(255, 122, 46, 0.5))
+    drop-shadow(0 22px 36px rgba(255, 90, 31, 0.3));
 }
 .hero-3d-hint {
   position: absolute;
@@ -1875,8 +1873,8 @@ createParticles('particles-alunos', 10);
     stack.appendChild(img);
   }
 
-  let rotY = -20, rotX = 5;
-  let velY = 0.35; // mais visível
+  let rotY = 0, rotX = 6;
+  const velY = 0.5; // graus por frame = rotação 360° contínua
   let isDragging = false;
   let lastX = 0, lastY = 0;
   let pausedUntil = 0;
@@ -1888,9 +1886,8 @@ createParticles('particles-alunos', 10);
 
   function tick() {
     if (!isDragging && performance.now() > pausedUntil) {
-      rotY += velY;
-      // Bounce entre -65° e +65° — gira bastante, MAS NUNCA passa de ±90° (nunca vê o verso)
-      if (rotY > 65 || rotY < -65) velY *= -1;
+      rotY += velY; // sempre cresce = rotação 360° contínua
+      if (rotY >= 360) rotY -= 360;
     }
     applyTransform();
     requestAnimationFrame(tick);
@@ -1904,10 +1901,8 @@ createParticles('particles-alunos', 10);
   }
   function onMove(x, y) {
     if (!isDragging) return;
-    rotY += (x - lastX) * 0.4;
+    rotY += (x - lastX) * 0.5;
     rotX -= (y - lastY) * 0.3;
-    // Trava o drag pra também nunca passar de ±85° (nunca ver verso)
-    rotY = Math.max(-85, Math.min(85, rotY));
     rotX = Math.max(-45, Math.min(45, rotX));
     lastX = x; lastY = y;
   }
