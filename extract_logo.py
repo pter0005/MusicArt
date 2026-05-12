@@ -49,19 +49,20 @@ print(f"Pixels bordô: {np.sum(bordo_mask > 0)}")
 print(f"Pixels dourado: {np.sum(dourado_mask > 0)}")
 
 # Encontrar contornos
-def contours_for(mask, simplify_epsilon=1.5):
-    # Limpar ruído
-    kernel = np.ones((2,2), np.uint8)
+def contours_for(mask, simplify_epsilon=0.5):
+    # Limpar ruído com kernel maior pra suavizar bordas pixeladas
+    kernel = np.ones((3,3), np.uint8)
     mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
     mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
-    contours, hierarchy = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    # Filtrar contornos minúsculos
+    # Blur leve pra suavizar antes do contour
+    mask = cv2.GaussianBlur(mask, (3, 3), 0)
+    _, mask = cv2.threshold(mask, 127, 255, cv2.THRESH_BINARY)
+    contours, hierarchy = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
     contours = [c for c in contours if cv2.contourArea(c) > 30]
-    # Simplificar polígonos
+    # MUITO menos simplificação = mais pontos = curvas mais lisas
     simplified = []
     for c in contours:
-        eps = simplify_epsilon
-        c2 = cv2.approxPolyDP(c, eps, True)
+        c2 = cv2.approxPolyDP(c, simplify_epsilon, True)
         simplified.append(c2)
     return simplified
 
@@ -78,9 +79,9 @@ def normalize(contours):
         pts = []
         for [pt] in c:
             x, y = pt
-            # Centralizar e escalar pra ~10 unidades (Three.js scale)
-            nx = (x - W/2) / max(W, H) * 10
-            ny = -(y - H/2) / max(W, H) * 10  # Y flip (Three.js Y-up)
+            # Centralizar e escalar pra 7 unidades (menor que antes)
+            nx = (x - W/2) / max(W, H) * 7
+            ny = -(y - H/2) / max(W, H) * 7
             pts.append([round(nx, 3), round(ny, 3)])
         out.append(pts)
     return out

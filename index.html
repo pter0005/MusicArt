@@ -1886,16 +1886,23 @@ import * as THREE from 'three';
     const response = await fetch('images/logo_paths.json');
     const data = await response.json();
 
-    const bordoMat = new THREE.MeshStandardMaterial({
+    // Material BRILHANTE — high metalness, low roughness pra reflexo bonito
+    const bordoMat = new THREE.MeshPhysicalMaterial({
       color: 0x540c18,
-      metalness: 0.15,
-      roughness: 0.45,
+      metalness: 0.7,
+      roughness: 0.18,
+      clearcoat: 0.6,
+      clearcoatRoughness: 0.1,
+      reflectivity: 0.7,
       side: THREE.DoubleSide
     });
-    const doradoMat = new THREE.MeshStandardMaterial({
+    const doradoMat = new THREE.MeshPhysicalMaterial({
       color: 0xc69444,
-      metalness: 0.25,
-      roughness: 0.4,
+      metalness: 0.85,
+      roughness: 0.14,
+      clearcoat: 0.7,
+      clearcoatRoughness: 0.08,
+      reflectivity: 0.85,
       side: THREE.DoubleSide
     });
 
@@ -1903,22 +1910,34 @@ import * as THREE from 'three';
       paths.forEach(pts => {
         if (pts.length < 3) return;
         const shape = new THREE.Shape();
-        shape.moveTo(pts[0][0], pts[0][1]);
-        for (let i = 1; i < pts.length; i++) {
-          shape.lineTo(pts[i][0], pts[i][1]);
+        // Spline interpolation pra suavizar — pega só 1 a cada 2 pontos pra evitar overshoot
+        const stride = pts.length > 100 ? 2 : 1;
+        const v2pts = [];
+        for (let i = 0; i < pts.length; i += stride) {
+          v2pts.push(new THREE.Vector2(pts[i][0], pts[i][1]));
         }
+        // Garantir fechamento
+        if (v2pts[0].x !== v2pts[v2pts.length-1].x || v2pts[0].y !== v2pts[v2pts.length-1].y) {
+          v2pts.push(v2pts[0].clone());
+        }
+        shape.moveTo(v2pts[0].x, v2pts[0].y);
+        // splineThru cria spline suave através dos pontos
+        shape.splineThru(v2pts.slice(1));
         shape.closePath();
         const geo = new THREE.ExtrudeGeometry(shape, {
-          depth: 0.45,
+          depth: 0.3,
           bevelEnabled: true,
-          bevelThickness: 0.05,
-          bevelSize: 0.04,
-          bevelSegments: 3,
-          curveSegments: 12
+          bevelThickness: 0.035,
+          bevelSize: 0.028,
+          bevelSegments: 5,
+          curveSegments: 32 // muito mais segmentos = curvas lisas
         });
-        // Centralizar Z na origem
-        geo.translate(0, 0, -0.225);
+        geo.translate(0, 0, -0.15);
+        // Computar normais suaves
+        geo.computeVertexNormals();
         const mesh = new THREE.Mesh(geo, material);
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
         group.add(mesh);
       });
     }
