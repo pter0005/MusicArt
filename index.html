@@ -392,17 +392,21 @@ nav {
 }
 .hero-3d-glow {
   position: absolute;
-  inset: -60px;
-  background: radial-gradient(circle, rgba(198, 148, 68, 0.35) 0%, transparent 60%);
-  filter: blur(40px);
+  inset: -80px;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(198, 148, 68, 0.45) 0%, transparent 55%),
+    radial-gradient(circle at 30% 70%, rgba(84, 12, 24, 0.25) 0%, transparent 55%);
+  filter: blur(50px);
   z-index: 0;
-  animation: glowPulse 4s ease-in-out infinite;
+  animation: glowPulse 5s ease-in-out infinite;
   pointer-events: none;
   transition: background 0.5s ease, filter 0.5s ease;
 }
 [data-theme="dark"] .hero-3d-glow {
-  background: radial-gradient(circle, rgba(255, 130, 40, 0.55) 0%, transparent 60%);
-  filter: blur(55px);
+  background:
+    radial-gradient(circle at 50% 50%, rgba(255, 140, 50, 0.65) 0%, transparent 55%),
+    radial-gradient(circle at 30% 70%, rgba(255, 80, 20, 0.4) 0%, transparent 55%);
+  filter: blur(65px);
 }
 @keyframes glowPulse {
   0%, 100% { opacity: 0.6; transform: scale(1); }
@@ -1853,14 +1857,24 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
   const pmrem = new THREE.PMREMGenerator(renderer);
   scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
 
-  // Lights
-  scene.add(new THREE.AmbientLight(0xffffff, 0.6));
-  const key = new THREE.DirectionalLight(0xffffff, 1.3);
-  key.position.set(3, 4, 6);
+  // Lights — setup de joalheria/produto
+  scene.add(new THREE.AmbientLight(0xffffff, 0.4));
+  // Key light (principal, do alto-direita)
+  const key = new THREE.DirectionalLight(0xffffff, 1.6);
+  key.position.set(3.5, 4.5, 6);
   scene.add(key);
+  // Fill light (suaviza sombras, quente)
   const fill = new THREE.DirectionalLight(0xffd9a0, 0.5);
   fill.position.set(-4, 2, 4);
   scene.add(fill);
+  // Rim light (atrás, cria highlight nas bordas)
+  const rim = new THREE.DirectionalLight(0xffaa55, 1.4);
+  rim.position.set(0, -1, -4);
+  scene.add(rim);
+  // Top accent (pontual, traz brilho extra no topo)
+  const top = new THREE.PointLight(0xfff5e0, 0.8, 12, 1.5);
+  top.position.set(0, 5, 2);
+  scene.add(top);
 
   // Materiais — versão "joia brilhante" do commit 23de32b
   const bordoMat = new THREE.MeshPhysicalMaterial({
@@ -1955,11 +1969,24 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
   window.addEventListener('resize', onResize);
   onResize();
 
+  const t0 = performance.now();
   function animate() {
     requestAnimationFrame(animate);
-    if (!isDragging && performance.now() > pausedUntil) rotY += velY;
+    const t = (performance.now() - t0) / 1000;
+
+    if (!isDragging && performance.now() > pausedUntil) {
+      rotY += velY;
+      // Tilt orgânico sutil (oscila 4°) só quando auto-girando
+      const wobbleX = Math.sin(t * 0.6) * 0.04;
+      logoGroup.rotation.x = rotX + wobbleX;
+    } else {
+      logoGroup.rotation.x = rotX;
+    }
     logoGroup.rotation.y = rotY;
-    logoGroup.rotation.x = rotX;
+
+    // Float vertical sutil (sobe e desce 0.15 unidades a cada 4s)
+    logoGroup.position.y = Math.sin(t * 0.8) * 0.15;
+
     renderer.render(scene, camera);
   }
   animate();
