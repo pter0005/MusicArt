@@ -1880,7 +1880,6 @@ import * as THREE from 'three';
   function buildLogo() {
     const group = new THREE.Group();
 
-    // Usar a PNG da logo como textura em um plano levemente extrudado
     const textureLoader = new THREE.TextureLoader();
     const texture = textureLoader.load('images/logo.png', (tex) => {
       tex.colorSpace = THREE.SRGBColorSpace;
@@ -1889,20 +1888,36 @@ import * as THREE from 'three';
       tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
     });
 
-    // Material com a textura — duas faces, transparente
+    // Textura como displacement map (cria relevo real onde tem pixels coloridos)
+    const dispTexture = textureLoader.load('images/logo.png');
+
     logoMaterial = new THREE.MeshStandardMaterial({
       map: texture,
+      alphaMap: texture,
       transparent: true,
-      alphaTest: 0.05,
+      alphaTest: 0.1,
       side: THREE.DoubleSide,
-      metalness: 0.3,
-      roughness: 0.45
+      metalness: 0.5,
+      roughness: 0.25,
+      displacementMap: dispTexture,
+      displacementScale: 0.4,
+      bumpMap: dispTexture,
+      bumpScale: 0.15
     });
 
-    // Plano com a textura (5.4 wide × 5.2 tall — aspect ratio da imagem 519/497)
-    const planeGeo = new THREE.PlaneGeometry(5.4, 5.2);
+    // Plano com alta densidade de polígonos pra displacement funcionar bem
+    const W = 5.2, H = 5.0;
+    const planeGeo = new THREE.PlaneGeometry(W, H, 256, 256);
     const planeMesh = new THREE.Mesh(planeGeo, logoMaterial);
     group.add(planeMesh);
+
+    // Plano espelho atrás (back face) com mesma textura
+    const backGeo = new THREE.PlaneGeometry(W, H, 256, 256);
+    const backMat = logoMaterial.clone();
+    backMat.displacementScale = -0.4; // espelhado pra trás
+    const backMesh = new THREE.Mesh(backGeo, backMat);
+    backMesh.rotation.y = Math.PI; // vira pra trás
+    group.add(backMesh);
 
     return group;
   }
