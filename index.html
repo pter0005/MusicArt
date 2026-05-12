@@ -1915,34 +1915,30 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
       paths.forEach(pts => {
         if (pts.length < 3) return;
         const shape = new THREE.Shape();
-        // Spline interpolation pra suavizar — pega só 1 a cada 2 pontos pra evitar overshoot
-        const stride = pts.length > 100 ? 2 : 1;
+        // Pontos já suavizados pelo Python — usar TODOS, mas com stride pra não exagerar
+        const stride = Math.max(1, Math.floor(pts.length / 80));
         const v2pts = [];
         for (let i = 0; i < pts.length; i += stride) {
           v2pts.push(new THREE.Vector2(pts[i][0], pts[i][1]));
         }
-        // Garantir fechamento
-        if (v2pts[0].x !== v2pts[v2pts.length-1].x || v2pts[0].y !== v2pts[v2pts.length-1].y) {
+        if (v2pts[0].distanceTo(v2pts[v2pts.length-1]) > 0.01) {
           v2pts.push(v2pts[0].clone());
         }
         shape.moveTo(v2pts[0].x, v2pts[0].y);
-        // splineThru cria spline suave através dos pontos
+        // splineThru cria curvas Bézier suaves entre os pontos
         shape.splineThru(v2pts.slice(1));
-        shape.closePath();
         const geo = new THREE.ExtrudeGeometry(shape, {
-          depth: 0.3,
+          depth: 0.28,
           bevelEnabled: true,
-          bevelThickness: 0.035,
-          bevelSize: 0.028,
-          bevelSegments: 5,
-          curveSegments: 32 // muito mais segmentos = curvas lisas
+          bevelThickness: 0.04,
+          bevelSize: 0.03,
+          bevelSegments: 8,
+          curveSegments: 64 // dobrado pra superfície ULTRA suave
         });
-        geo.translate(0, 0, -0.15);
-        // Computar normais suaves
+        geo.translate(0, 0, -0.14);
+        // BufferGeometry: computar normais com smoothing angle pra shading suave
         geo.computeVertexNormals();
         const mesh = new THREE.Mesh(geo, material);
-        mesh.castShadow = true;
-        mesh.receiveShadow = true;
         group.add(mesh);
       });
     }

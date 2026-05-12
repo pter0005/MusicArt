@@ -49,22 +49,41 @@ print(f"Pixels bordô: {np.sum(bordo_mask > 0)}")
 print(f"Pixels dourado: {np.sum(dourado_mask > 0)}")
 
 # Encontrar contornos
-def contours_for(mask, simplify_epsilon=0.5):
-    # Limpar ruído com kernel maior pra suavizar bordas pixeladas
-    kernel = np.ones((3,3), np.uint8)
+def smooth_contour(c, window=15, iterations=3):
+    """
+    Suaviza contorno com moving average. Aplicado várias vezes pra remover zigzag.
+    Mantém os pontos como contorno fechado (wrap-around).
+    """
+    pts = c.reshape(-1, 2).astype(np.float32)
+    n = len(pts)
+    if n < window * 2:
+        return c
+    for _ in range(iterations):
+        smoothed = np.zeros_like(pts)
+        for i in range(n):
+            # Janela centrada no ponto i, com wrap-around
+            indices = [(i + j - window // 2) % n for j in range(window)]
+            smoothed[i] = pts[indices].mean(axis=0)
+        pts = smoothed
+    return pts.reshape(-1, 1, 2).astype(np.int32)
+
+def contours_for(mask, simplify_epsilon=0.3):
+    # Limpar e suavizar mask
+    kernel = np.ones((4, 4), np.uint8)
     mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
     mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
-    # Blur leve pra suavizar antes do contour
-    mask = cv2.GaussianBlur(mask, (3, 3), 0)
+    # Gaussian blur mais forte
+    mask = cv2.GaussianBlur(mask, (7, 7), 2)
     _, mask = cv2.threshold(mask, 127, 255, cv2.THRESH_BINARY)
     contours, hierarchy = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
     contours = [c for c in contours if cv2.contourArea(c) > 30]
-    # MUITO menos simplificação = mais pontos = curvas mais lisas
-    simplified = []
+    # Suavizar cada contorno com moving average (remove zigzag pixel-level)
+    smoothed_contours = []
     for c in contours:
-        c2 = cv2.approxPolyDP(c, simplify_epsilon, True)
-        simplified.append(c2)
-    return simplified
+        c_smooth = smooth_contour(c, window=21, iterations=5)
+        c_final = cv2.approxPolyDP(c_smooth, simplify_epsilon, True)
+        smoothed_contours.append(c_final)
+    return smoothed_contours
 
 bordo_contours = contours_for(bordo_mask)
 dourado_contours = contours_for(dourado_mask)
