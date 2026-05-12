@@ -181,6 +181,15 @@ nav {
 }
 .logo .gold { color: var(--dourado); }
 .logo svg { width: 44px; height: 44px; flex-shrink: 0; }
+.logo-img {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  object-fit: contain;
+}
+[data-theme="dark"] .logo-img {
+  filter: brightness(1.2) saturate(1.3);
+}
 .nav-links { display: flex; gap: 38px; list-style: none; }
 .nav-links a {
   text-decoration: none; color: var(--texto);
@@ -1159,12 +1168,10 @@ footer::before {
       <g fill="none" stroke="var(--dourado)" stroke-linecap="round" stroke-width="3">
         <path d="M 72 11.89 A 44 44 0 0 1 92.5 61.39"/>
       </g>
-      <!-- Nota oitava (dourada) — cabeça em (45, 58), rx=7, ry=5, tilt -25° -->
+      <!-- Nota oitava (dourada) centralizada -->
       <g fill="var(--dourado)" stroke="var(--dourado)" stroke-linejoin="round">
         <ellipse cx="45" cy="58" rx="7" ry="5" transform="rotate(-25 45 58)"/>
-        <!-- Haste fina à direita da cabeça -->
         <rect x="50.4" y="30" width="1.6" height="28"/>
-        <!-- Bandeirola: gancho elegante com curva externa convexa + interna côncava -->
         <path d="M 51.2 30
                  C 56 31.5, 60 34, 61.5 38
                  C 62.8 41.5, 61.8 44.5, 59 46.5
@@ -1389,7 +1396,7 @@ footer::before {
 <!-- NAV -->
 <nav>
   <a href="#" class="logo" aria-label="MusicArt - página inicial">
-    <svg style="color: var(--bordo)"><use href="#logo-musicart"/></svg>
+    <img src="images/logo.png" alt="MusicArt" class="logo-img">
     <span>Music<span class="gold">Art</span></span>
   </a>
   <ul class="nav-links" id="navLinks">
@@ -1644,7 +1651,7 @@ footer::before {
   <div class="footer-grid">
     <div class="footer-brand">
       <a href="#" class="logo">
-        <svg style="color: var(--dourado)"><use href="#logo-musicart"/></svg>
+        <img src="images/logo.png" alt="MusicArt" class="logo-img">
         <span style="color: var(--branco)">Music<span class="gold">Art</span></span>
       </a>
       <p>Escola de música em Arujá. Aulas para todas as idades, do iniciante ao avançado.</p>
@@ -1868,8 +1875,59 @@ import * as THREE from 'three';
   let logo = null;
   let doradoMat = null;
   let bordoMat = null;
+  let logoMaterial = null;
 
   function buildLogo() {
+    const group = new THREE.Group();
+
+    // Usar a PNG da logo como textura em um plano levemente extrudado
+    const textureLoader = new THREE.TextureLoader();
+    const texture = textureLoader.load('images/logo.png', (tex) => {
+      tex.colorSpace = THREE.SRGBColorSpace;
+      tex.minFilter = THREE.LinearFilter;
+      tex.magFilter = THREE.LinearFilter;
+      tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+    });
+
+    // Material com a textura — duas faces, transparente
+    logoMaterial = new THREE.MeshStandardMaterial({
+      map: texture,
+      transparent: true,
+      alphaTest: 0.05,
+      side: THREE.DoubleSide,
+      metalness: 0.3,
+      roughness: 0.45
+    });
+
+    // Plano com a textura (5.4 wide × 5.2 tall — aspect ratio da imagem 519/497)
+    const planeGeo = new THREE.PlaneGeometry(5.4, 5.2);
+    const planeMesh = new THREE.Mesh(planeGeo, logoMaterial);
+    group.add(planeMesh);
+
+    return group;
+  }
+
+  function applyPalette() {
+    const p = getPalette();
+    if (logoMaterial) {
+      // Em dark mode, dar um glow laranja na logo via emissive
+      if (document.documentElement.getAttribute('data-theme') === 'dark') {
+        logoMaterial.emissive.setHex(0xff7a2e);
+        logoMaterial.emissiveIntensity = 0.35;
+        logoMaterial.emissiveMap = logoMaterial.map; // mesma textura como mask
+      } else {
+        logoMaterial.emissive.setHex(0x000000);
+        logoMaterial.emissiveIntensity = 0;
+      }
+      logoMaterial.needsUpdate = true;
+    }
+    rim.color.setHex(p.rim);
+    rim.intensity = p.rimI;
+    ambient.intensity = p.ambient;
+  }
+
+  // (Antiga função buildLogo geométrica — mantida pra fallback) ====
+  function _buildLogoOLD() {
     const group = new THREE.Group();
     const p = getPalette();
 
@@ -1993,29 +2051,6 @@ import * as THREE from 'three';
     group.add(note);
 
     return group;
-  }
-
-  function applyPalette() {
-    const p = getPalette();
-    if (doradoMat) {
-      doradoMat.color.setHex(p.dourado);
-      doradoMat.emissive.setHex(p.dourEm);
-      doradoMat.emissiveIntensity = p.dourEmI;
-      doradoMat.metalness = p.metal;
-      doradoMat.roughness = p.rough;
-      doradoMat.needsUpdate = true;
-    }
-    if (bordoMat) {
-      bordoMat.color.setHex(p.bordo);
-      bordoMat.emissive.setHex(p.bordEm);
-      bordoMat.emissiveIntensity = p.bordEmI;
-      bordoMat.metalness = p.metal * 0.85;
-      bordoMat.roughness = p.rough + 0.05;
-      bordoMat.needsUpdate = true;
-    }
-    rim.color.setHex(p.rim);
-    rim.intensity = p.rimI;
-    ambient.intensity = p.ambient;
   }
 
   logo = buildLogo();

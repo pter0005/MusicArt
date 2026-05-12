@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Logo Tracer Interativo — MusicArt</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: monospace; background: #1a1a1a; color: #f0f0f0; padding: 16px; display: flex; gap: 20px; }
+  .left-col { flex-shrink: 0; }
+  .right-col { flex: 1; min-width: 0; }
+  h1 { color: #c69444; font-size: 16px; margin-bottom: 12px; }
+  .stage {
+    position: relative;
+    width: 540px;
+    height: 540px;
+    background: white;
+    border: 2px solid #c69444;
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .stage img.ref {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+  .stage svg.over {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0.6;
+  }
+  .opacity-row {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 12px;
+    font-size: 11px;
+  }
+  .opacity-row label { display: flex; flex-direction: column; gap: 4px; }
+
+  .controls {
+    background: #252525;
+    padding: 16px;
+    border-radius: 8px;
+    font-size: 11px;
+    line-height: 1.4;
+    max-height: calc(100vh - 40px);
+    overflow-y: auto;
+  }
+  .group { margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid #444; }
+  .group h3 {
+    color: #c69444;
+    font-size: 12px;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+  .control {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+    font-size: 10px;
+  }
+  .control label {
+    flex: 0 0 70px;
+    color: #aaa;
+  }
+  .control input[type="range"] {
+    flex: 1;
+    min-width: 100px;
+  }
+  .control input[type="number"] {
+    width: 56px;
+    background: #333;
+    color: #ffaa44;
+    border: 1px solid #555;
+    padding: 3px 4px;
+    font-family: inherit;
+    font-size: 10px;
+  }
+
+  button {
+    background: #c69444;
+    color: #1a1a1a;
+    border: none;
+    padding: 8px 14px;
+    border-radius: 4px;
+    font-family: inherit;
+    font-size: 11px;
+    cursor: pointer;
+    margin-top: 8px;
+    font-weight: 700;
+  }
+  button:hover { background: #d9ad63; }
+
+  pre.output {
+    margin-top: 16px;
+    padding: 12px;
+    background: #0a0a0a;
+    border: 1px solid #c69444;
+    border-radius: 6px;
+    color: #ffaa44;
+    font-size: 10px;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    max-width: 540px;
+  }
+</style>
+</head>
+<body>
+
+<div class="left-col">
+  <h1>🎯 LOGO TRACER INTERATIVO</h1>
+
+  <div class="opacity-row">
+    <label>Opacidade SVG: <input type="range" id="opacity" min="0" max="1" step="0.05" value="0.6"></label>
+    <label>Opacidade IMG: <input type="range" id="imgOpacity" min="0" max="1" step="0.05" value="1"></label>
+  </div>
+
+  <div class="stage">
+    <img class="ref" src="images/reference.png" alt="reference">
+    <svg class="over" id="overlay" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <g fill="none" stroke="#540c18" stroke-linecap="round" id="bordo-group"></g>
+      <path id="arc4" fill="none" stroke="#c69444" stroke-linecap="round"/>
+      <g fill="#c69444" stroke="#c69444" stroke-linejoin="round" id="note-group">
+        <ellipse id="head"/>
+        <rect id="stem"/>
+        <path id="flag" stroke-width="0.3"/>
+      </g>
+    </svg>
+  </div>
+
+  <button onclick="dumpCode()">📋 Copiar SVG final</button>
+  <pre class="output" id="output"></pre>
+</div>
+
+<div class="right-col">
+  <div class="controls">
+    <div class="group">
+      <h3>1, 2, 3 — Arcos Bordô (concêntricos)</h3>
+      <div class="control">
+        <label>Raio 1 (interno)</label>
+        <input type="range" id="r1" min="10" max="50" step="0.5" value="24"/>
+        <input type="number" id="r1n" value="24" step="0.5"/>
+      </div>
+      <div class="control">
+        <label>Raio 2 (médio)</label>
+        <input type="range" id="r2" min="10" max="50" step="0.5" value="30"/>
+        <input type="number" id="r2n" value="30" step="0.5"/>
+      </div>
+      <div class="control">
+        <label>Raio 3 (externo)</label>
+        <input type="range" id="r3" min="10" max="50" step="0.5" value="36"/>
+        <input type="number" id="r3n" value="36" step="0.5"/>
+      </div>
+      <div class="control">
+        <label>Início (clock h)</label>
+        <input type="range" id="startH" min="6" max="12" step="0.1" value="10.5"/>
+        <input type="number" id="startHn" value="10.5" step="0.1"/>
+      </div>
+      <div class="control">
+        <label>Fim (clock h)</label>
+        <input type="range" id="endH" min="2" max="6" step="0.1" value="4.5"/>
+        <input type="number" id="endHn" value="4.5" step="0.1"/>
+      </div>
+      <div class="control">
+        <label>Stroke width</label>
+        <input type="range" id="strokeB" min="1" max="6" step="0.1" value="3"/>
+        <input type="number" id="strokeBn" value="3" step="0.1"/>
+      </div>
+    </div>
+
+    <div class="group">
+      <h3>4 — Arco Dourado</h3>
+      <div class="control">
+        <label>Raio</label>
+        <input type="range" id="dR" min="10" max="50" step="0.5" value="36"/>
+        <input type="number" id="dRn" value="36" step="0.5"/>
+      </div>
+      <div class="control">
+        <label>Início (clock h)</label>
+        <input type="range" id="dStartH" min="11" max="3" step="0.1" value="12.5"/>
+        <input type="number" id="dStartHn" value="12.5" step="0.1"/>
+      </div>
+      <div class="control">
+        <label>Fim (clock h)</label>
+        <input type="range" id="dEndH" min="2" max="5" step="0.1" value="3.5"/>
+        <input type="number" id="dEndHn" value="3.5" step="0.1"/>
+      </div>
+    </div>
+
+    <div class="group">
+      <h3>5 — Cabeça da Nota</h3>
+      <div class="control">
+        <label>cx</label>
+        <input type="range" id="hcx" min="20" max="80" step="0.5" value="48"/>
+        <input type="number" id="hcxn" value="48" step="0.5"/>
+      </div>
+      <div class="control">
+        <label>cy</label>
+        <input type="range" id="hcy" min="20" max="80" step="0.5" value="58"/>
+        <input type="number" id="hcyn" value="58" step="0.5"/>
+      </div>
+      <div class="control">
+        <label>rx</label>
+        <input type="range" id="hrx" min="2" max="12" step="0.1" value="6.5"/>
+        <input type="number" id="hrxn" value="6.5" step="0.1"/>
+      </div>
+      <div class="control">
+        <label>ry</label>
+        <input type="range" id="hry" min="2" max="10" step="0.1" value="4.8"/>
+        <input type="number" id="hryn" value="4.8" step="0.1"/>
+      </div>
+      <div class="control">
+        <label>Tilt (deg)</label>
+        <input type="range" id="htilt" min="-45" max="45" step="1" value="-25"/>
+        <input type="number" id="htiltn" value="-25" step="1"/>
+      </div>
+    </div>
+
+    <div class="group">
+      <h3>6 — Haste (Stem)</h3>
+      <div class="control">
+        <label>x</label>
+        <input type="range" id="sx" min="20" max="80" step="0.5" value="53"/>
+        <input type="number" id="sxn" value="53" step="0.5"/>
+      </div>
+      <div class="control">
+        <label>y (topo)</label>
+        <input type="range" id="sy" min="5" max="50" step="0.5" value="20"/>
+        <input type="number" id="syn" value="20" step="0.5"/>
+      </div>
+      <div class="control">
+        <label>width</label>
+        <input type="range" id="sw" min="0.5" max="5" step="0.1" value="1.6"/>
+        <input type="number" id="swn" value="1.6" step="0.1"/>
+      </div>
+      <div class="control">
+        <label>height</label>
+        <input type="range" id="sh" min="10" max="60" step="0.5" value="38"/>
+        <input type="number" id="shn" value="38" step="0.5"/>
+      </div>
+    </div>
+
+    <div class="group">
+      <h3>7 — Bandeirola</h3>
+      <div class="control">
+        <label>flag scale</label>
+        <input type="range" id="fScale" min="0.5" max="2" step="0.05" value="1"/>
+        <input type="number" id="fScalen" value="1" step="0.05"/>
+      </div>
+      <div class="control">
+        <label>flag offset X</label>
+        <input type="range" id="fOx" min="-10" max="10" step="0.5" value="0"/>
+        <input type="number" id="fOxn" value="0" step="0.5"/>
+      </div>
+      <div class="control">
+        <label>flag offset Y</label>
+        <input type="range" id="fOy" min="-10" max="10" step="0.5" value="0"/>
+        <input type="number" id="fOyn" value="0" step="0.5"/>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Sync slider + number inputs
+  function bindPair(rangeId, numberId, callback) {
+    const r = document.getElementById(rangeId);
+    const n = document.getElementById(numberId);
+    r.addEventListener('input', () => { n.value = r.value; callback(); });
+    n.addEventListener('input', () => { r.value = n.value; callback(); });
+  }
+
+  function clockToSvgAngle(h) {
+    return (h * 30 - 90) * Math.PI / 180;
+  }
+
+  function pointAt(cx, cy, r, angleRad) {
+    return { x: cx + r * Math.cos(angleRad), y: cy + r * Math.sin(angleRad) };
+  }
+
+  function buildArcPath(cx, cy, r, startH, endH, throughBottom = true) {
+    const sA = clockToSvgAngle(startH);
+    const eA = clockToSvgAngle(endH);
+    const s = pointAt(cx, cy, r, sA);
+    const e = pointAt(cx, cy, r, eA);
+
+    let sweepDeg = (endH - startH + 12) % 12 * 30;
+    if (sweepDeg <= 0) sweepDeg += 360;
+    if (!throughBottom) sweepDeg = 360 - sweepDeg;
+    const largeArc = sweepDeg > 180 ? 1 : 0;
+    const sweepFlag = throughBottom ? 0 : 1;
+
+    return `M ${s.x.toFixed(2)} ${s.y.toFixed(2)} A ${r} ${r} 0 ${largeArc} ${sweepFlag} ${e.x.toFixed(2)} ${e.y.toFixed(2)}`;
+  }
+
+  function val(id) { return parseFloat(document.getElementById(id).value); }
+
+  function update() {
+    const cx = 50, cy = 50;
+
+    // Bordô arcs
+    const startH = val('startH');
+    const endH = val('endH');
+    const strokeB = val('strokeB');
+
+    const r1 = val('r1');
+    const r2 = val('r2');
+    const r3 = val('r3');
+
+    const grp = document.getElementById('bordo-group');
+    grp.setAttribute('stroke-width', strokeB);
+    grp.innerHTML = [r1, r2, r3].map(r =>
+      `<path d="${buildArcPath(cx, cy, r, startH, endH, true)}"/>`
+    ).join('');
+
+    // Dourado arc — different direction (CW through right side)
+    const dR = val('dR');
+    const dStartH = val('dStartH');
+    const dEndH = val('dEndH');
+
+    let dStartHmod = dStartH >= 12 ? dStartH - 12 : dStartH;
+    const dArc = document.getElementById('arc4');
+    dArc.setAttribute('d', buildArcPath(cx, cy, dR, dStartHmod, dEndH, false));
+    dArc.setAttribute('stroke-width', strokeB);
+
+    // Note head
+    const hcx = val('hcx'), hcy = val('hcy'), hrx = val('hrx'), hry = val('hry'), htilt = val('htilt');
+    const head = document.getElementById('head');
+    head.setAttribute('cx', hcx); head.setAttribute('cy', hcy);
+    head.setAttribute('rx', hrx); head.setAttribute('ry', hry);
+    head.setAttribute('transform', `rotate(${htilt} ${hcx} ${hcy})`);
+
+    // Stem
+    const sx = val('sx'), sy = val('sy'), sw_ = val('sw'), sh = val('sh');
+    const stem = document.getElementById('stem');
+    stem.setAttribute('x', sx); stem.setAttribute('y', sy);
+    stem.setAttribute('width', sw_); stem.setAttribute('height', sh);
+
+    // Flag
+    const fScale = val('fScale');
+    const fOx = val('fOx');
+    const fOy = val('fOy');
+    const baseX = sx + sw_ / 2 + fOx;
+    const baseY = sy + fOy;
+    const flagPath = `M ${baseX} ${baseY} ` +
+      `C ${baseX + 8*fScale} ${baseY - 1*fScale}, ${baseX + 14*fScale} ${baseY + 5*fScale}, ${baseX + 13*fScale} ${baseY + 13*fScale} ` +
+      `C ${baseX + 15*fScale} ${baseY + 6*fScale}, ${baseX + 10*fScale} ${baseY + 3*fScale}, ${baseX + 7*fScale} ${baseY + 4*fScale} ` +
+      `C ${baseX + 4*fScale} ${baseY}, ${baseX + 1*fScale} ${baseY}, ${baseX} ${baseY + 1*fScale} Z`;
+    document.getElementById('flag').setAttribute('d', flagPath);
+  }
+
+  // Bind all pairs
+  ['r1','r2','r3','startH','endH','strokeB','dR','dStartH','dEndH',
+   'hcx','hcy','hrx','hry','htilt','sx','sy','sw','sh','fScale','fOx','fOy'].forEach(id => {
+    bindPair(id, id+'n', update);
+  });
+
+  // Opacity controls
+  document.getElementById('opacity').addEventListener('input', e => {
+    document.getElementById('overlay').style.opacity = e.target.value;
+  });
+  document.getElementById('imgOpacity').addEventListener('input', e => {
+    document.querySelector('img.ref').style.opacity = e.target.value;
+  });
+
+  function dumpCode() {
+    const out = document.getElementById('overlay').outerHTML
+      .replace('class="over"', 'viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"')
+      .replace(/style="[^"]*"/g, '');
+    document.getElementById('output').textContent = out;
+  }
+
+  update();
+</script>
+
+</body>
+</html>
