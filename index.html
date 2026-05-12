@@ -1862,9 +1862,9 @@ createParticles('particles-alunos', 10);
   const stack = document.getElementById('hero3d');
   if (!scene || !stack) return;
 
-  // Gerar N layers da logo em Z escalonado = espessura visível
-  const LAYERS = 30;
-  const TOTAL_DEPTH = 14; // pixels de espessura total
+  // Gerar 18 layers da logo em Z (menos layers, gap maior pra menos bandas)
+  const LAYERS = 18;
+  const TOTAL_DEPTH = 18;
   const step = TOTAL_DEPTH / (LAYERS - 1);
   for (let i = 0; i < LAYERS; i++) {
     const img = document.createElement('img');
@@ -1875,8 +1875,8 @@ createParticles('particles-alunos', 10);
     stack.appendChild(img);
   }
 
-  let rotY = -18, rotX = 8;
-  let velY = 0.18; // graus por frame — mais visível
+  let rotY = -20, rotX = 5;
+  let velY = 0.35; // mais visível
   let isDragging = false;
   let lastX = 0, lastY = 0;
   let pausedUntil = 0;
@@ -1889,8 +1889,8 @@ createParticles('particles-alunos', 10);
   function tick() {
     if (!isDragging && performance.now() > pausedUntil) {
       rotY += velY;
-      // Wobble entre -35° e +35° — suficiente pra mostrar espessura sem ficar edge-on
-      if (rotY > 35 || rotY < -35) velY *= -1;
+      // Bounce entre -65° e +65° — gira bastante, MAS NUNCA passa de ±90° (nunca vê o verso)
+      if (rotY > 65 || rotY < -65) velY *= -1;
     }
     applyTransform();
     requestAnimationFrame(tick);
@@ -1906,6 +1906,8 @@ createParticles('particles-alunos', 10);
     if (!isDragging) return;
     rotY += (x - lastX) * 0.4;
     rotX -= (y - lastY) * 0.3;
+    // Trava o drag pra também nunca passar de ±85° (nunca ver verso)
+    rotY = Math.max(-85, Math.min(85, rotY));
     rotX = Math.max(-45, Math.min(45, rotX));
     lastX = x; lastY = y;
   }
