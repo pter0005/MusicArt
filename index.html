@@ -1887,7 +1887,7 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 
   const logoGroup = new THREE.Group();
 
-  function buildShapes(paths, material) {
+  function buildShapes(paths, material, zOffset = 0) {
     paths.forEach(pts => {
       if (pts.length < 3) return;
       const shape = new THREE.Shape();
@@ -1901,21 +1901,22 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
       shape.splineThru(v2pts.slice(1));
 
       const geo = new THREE.ExtrudeGeometry(shape, {
-        depth: 0.45,
+        depth: 0.42,
         bevelEnabled: true,
-        bevelThickness: 0.05,
-        bevelSize: 0.04,
+        bevelThickness: 0.035, // bevel menor pra não invadir vizinhos
+        bevelSize: 0.028,
         bevelSegments: 3,
         curveSegments: 12
       });
-      geo.translate(0, 0, -0.225);
+      geo.translate(0, 0, -0.21 + zOffset);
       geo.computeVertexNormals();
       logoGroup.add(new THREE.Mesh(geo, material));
     });
   }
 
-  buildShapes(data.bordo.paths, bordoMat);
-  buildShapes(data.dourado.paths, doradoMat);
+  // Dourado ligeiramente à frente (+Z) pra evitar colisão de bevel nos cruzamentos
+  buildShapes(data.bordo.paths, bordoMat, 0);
+  buildShapes(data.dourado.paths, doradoMat, 0.06);
   // Logo 25% maior
   logoGroup.scale.set(1.25, 1.25, 1.25);
   scene.add(logoGroup);
