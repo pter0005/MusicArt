@@ -1856,12 +1856,24 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
   fill.position.set(-4, 2, 4);
   scene.add(fill);
 
-  // Materiais — solid metal, cores vivas
-  const bordoMat = new THREE.MeshStandardMaterial({
-    color: 0x540c18, metalness: 0.45, roughness: 0.35
+  // Materiais — versão "joia brilhante" do commit 23de32b
+  const bordoMat = new THREE.MeshPhysicalMaterial({
+    color: 0x6d1020,
+    metalness: 0.4,
+    roughness: 0.3,
+    clearcoat: 0.4,
+    clearcoatRoughness: 0.15,
+    reflectivity: 0.5,
+    side: THREE.DoubleSide
   });
-  const doradoMat = new THREE.MeshStandardMaterial({
-    color: 0xc69444, metalness: 0.65, roughness: 0.25
+  const doradoMat = new THREE.MeshPhysicalMaterial({
+    color: 0xd9a85a,
+    metalness: 0.6,
+    roughness: 0.22,
+    clearcoat: 0.5,
+    clearcoatRoughness: 0.1,
+    reflectivity: 0.7,
+    side: THREE.DoubleSide
   });
 
   // Carregar paths extraídos do PNG via OpenCV
@@ -1883,14 +1895,14 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
       shape.splineThru(v2pts.slice(1));
 
       const geo = new THREE.ExtrudeGeometry(shape, {
-        depth: 0.4,
+        depth: 0.45,
         bevelEnabled: true,
-        bevelThickness: 0.015,
-        bevelSize: 0.015,
-        bevelSegments: 2,
-        curveSegments: 64
+        bevelThickness: 0.05,
+        bevelSize: 0.04,
+        bevelSegments: 3,
+        curveSegments: 12
       });
-      geo.translate(0, 0, -0.2);
+      geo.translate(0, 0, -0.225);
       geo.computeVertexNormals();
       logoGroup.add(new THREE.Mesh(geo, material));
     });
