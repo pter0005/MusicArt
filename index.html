@@ -1931,8 +1931,8 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
   // Dourado ligeiramente à frente (+Z) pra evitar colisão de bevel nos cruzamentos
   buildShapes(data.bordo.paths, bordoMat, 0);
   buildShapes(data.dourado.paths, doradoMat, 0.06);
-  // Logo 25% maior
-  logoGroup.scale.set(1.25, 1.25, 1.25);
+  // Logo 50% menor (era 1.25, agora 0.625)
+  logoGroup.scale.set(0.625, 0.625, 0.625);
   scene.add(logoGroup);
 
   // Drag + rotação automática AINDA MAIS LENTA, 360° contínuo
