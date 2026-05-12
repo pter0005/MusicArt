@@ -1890,12 +1890,12 @@ import * as THREE from 'three';
 
     const dispTexture = textureLoader.load('images/logo.png');
 
-    // Material simples — cores ricas, sem processo metálico que desbota
+    // Material front-side só — sem DoubleSide pra não ver frente+verso ao mesmo tempo
     logoMaterial = new THREE.MeshStandardMaterial({
       map: texture,
       transparent: true,
       alphaTest: 0.5,
-      side: THREE.DoubleSide,
+      side: THREE.FrontSide, // CRÍTICO: só uma face visível por vez
       metalness: 0,
       roughness: 0.7,
       displacementMap: dispTexture,
@@ -1903,11 +1903,21 @@ import * as THREE from 'three';
       displacementBias: 0
     });
 
-    // Plano único com alta resolução de malha pra displacement suave
     const W = 5.2, H = 5.0;
-    const planeGeo = new THREE.PlaneGeometry(W, H, 300, 300);
-    const planeMesh = new THREE.Mesh(planeGeo, logoMaterial);
-    group.add(planeMesh);
+    const SUB = 300;
+
+    // Frente (FrontSide) — vê quando rotação Y ≈ 0
+    const frontGeo = new THREE.PlaneGeometry(W, H, SUB, SUB);
+    const frontMesh = new THREE.Mesh(frontGeo, logoMaterial);
+    group.add(frontMesh);
+
+    // Verso INDEPENDENTE (girado 180°, também FrontSide) — vê quando rotação Y ≈ π
+    // Cada mesh é one-sided então NUNCA aparecem ao mesmo tempo
+    const backGeo = new THREE.PlaneGeometry(W, H, SUB, SUB);
+    const backMat = logoMaterial.clone();
+    const backMesh = new THREE.Mesh(backGeo, backMat);
+    backMesh.rotation.y = Math.PI;
+    group.add(backMesh);
 
     return group;
   }
