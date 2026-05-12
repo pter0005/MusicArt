@@ -13,9 +13,15 @@
 <meta property="og:title" content="MusicArt — Escola de Música em Arujá">
 <meta property="og:description" content="Aulas de música em Arujá. Comunidade acolhedora, professores apaixonados. Aula experimental gratuita.">
 <meta property="og:locale" content="pt_BR">
+<meta property="og:image" content="images/logo.png">
+<meta property="og:image:width" content="519">
+<meta property="og:image:height" content="497">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="images/logo.png">
 
 <!-- Favicon -->
-<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="icon" type="image/png" href="images/logo.png">
+<link rel="apple-touch-icon" href="images/logo.png">
 
 <!-- Fonts -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -1836,11 +1842,11 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
   const camera = new THREE.PerspectiveCamera(40, 1, 0.1, 100);
   camera.position.set(0, 0, 11);
 
-  const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+  const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true, powerPreference: 'high-performance' });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.15;
+  renderer.toneMappingExposure = 1.2;
   container.appendChild(renderer.domElement);
 
   // Environment map procedural pra metalness aparecer com cor
@@ -1910,11 +1916,13 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 
   buildShapes(data.bordo.paths, bordoMat);
   buildShapes(data.dourado.paths, doradoMat);
+  // Logo 25% maior
+  logoGroup.scale.set(1.25, 1.25, 1.25);
   scene.add(logoGroup);
 
-  // Drag + rotação automática LENTA, 360° contínuo
+  // Drag + rotação automática AINDA MAIS LENTA, 360° contínuo
   let rotY = -0.2, rotX = 0.08;
-  const velY = 0.004; // SLOW — full rotation em ~26s
+  const velY = 0.0022; // ~50s por volta completa
   let isDragging = false;
   let lastX = 0, lastY = 0;
   let pausedUntil = 0;
