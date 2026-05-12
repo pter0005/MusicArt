@@ -1879,63 +1879,76 @@ import * as THREE from 'three';
 
   function buildLogo() {
     const group = new THREE.Group();
+    return group; // Será preenchido pela função async carregadora
+  }
 
-    const textureLoader = new THREE.TextureLoader();
-    const texture = textureLoader.load('images/logo.png', (tex) => {
-      tex.colorSpace = THREE.SRGBColorSpace;
-      tex.minFilter = THREE.LinearFilter;
-      tex.magFilter = THREE.LinearFilter;
-      tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+  async function loadAndBuildExtrudedLogo(group) {
+    const response = await fetch('images/logo_paths.json');
+    const data = await response.json();
+
+    const bordoMat = new THREE.MeshStandardMaterial({
+      color: 0x540c18,
+      metalness: 0.15,
+      roughness: 0.45,
+      side: THREE.DoubleSide
+    });
+    const doradoMat = new THREE.MeshStandardMaterial({
+      color: 0xc69444,
+      metalness: 0.25,
+      roughness: 0.4,
+      side: THREE.DoubleSide
     });
 
-    const dispTexture = textureLoader.load('images/logo.png');
+    function pathsToMeshes(paths, material) {
+      paths.forEach(pts => {
+        if (pts.length < 3) return;
+        const shape = new THREE.Shape();
+        shape.moveTo(pts[0][0], pts[0][1]);
+        for (let i = 1; i < pts.length; i++) {
+          shape.lineTo(pts[i][0], pts[i][1]);
+        }
+        shape.closePath();
+        const geo = new THREE.ExtrudeGeometry(shape, {
+          depth: 0.45,
+          bevelEnabled: true,
+          bevelThickness: 0.05,
+          bevelSize: 0.04,
+          bevelSegments: 3,
+          curveSegments: 12
+        });
+        // Centralizar Z na origem
+        geo.translate(0, 0, -0.225);
+        const mesh = new THREE.Mesh(geo, material);
+        group.add(mesh);
+      });
+    }
 
-    // Material front-side só — sem DoubleSide pra não ver frente+verso ao mesmo tempo
-    logoMaterial = new THREE.MeshStandardMaterial({
-      map: texture,
-      transparent: true,
-      alphaTest: 0.5,
-      side: THREE.FrontSide, // CRÍTICO: só uma face visível por vez
-      metalness: 0,
-      roughness: 0.7,
-      displacementMap: dispTexture,
-      displacementScale: 0.3,
-      displacementBias: 0
-    });
+    pathsToMeshes(data.bordo.paths, bordoMat);
+    pathsToMeshes(data.dourado.paths, doradoMat);
 
-    const W = 5.2, H = 5.0;
-    const SUB = 300;
-
-    // Frente (FrontSide) — vê quando rotação Y ≈ 0
-    const frontGeo = new THREE.PlaneGeometry(W, H, SUB, SUB);
-    const frontMesh = new THREE.Mesh(frontGeo, logoMaterial);
-    group.add(frontMesh);
-
-    // Verso INDEPENDENTE (girado 180°, também FrontSide) — vê quando rotação Y ≈ π
-    // Cada mesh é one-sided então NUNCA aparecem ao mesmo tempo
-    const backGeo = new THREE.PlaneGeometry(W, H, SUB, SUB);
-    const backMat = logoMaterial.clone();
-    const backMesh = new THREE.Mesh(backGeo, backMat);
-    backMesh.rotation.y = Math.PI;
-    group.add(backMesh);
-
-    return group;
+    // Guardar refs pra applyPalette
+    logoMaterial = bordoMat;
+    window._doradoLogoMat = doradoMat;
   }
 
   function applyPalette() {
     const p = getPalette();
-    if (logoMaterial) {
-      // Em dark mode, dar um glow laranja na logo via emissive
-      if (document.documentElement.getAttribute('data-theme') === 'dark') {
-        logoMaterial.emissive.setHex(0xff7a2e);
-        logoMaterial.emissiveIntensity = 0.35;
-        logoMaterial.emissiveMap = logoMaterial.map; // mesma textura como mask
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    function paintMat(mat, baseColorHex, darkColorHex, darkEmissive) {
+      if (!mat) return;
+      if (isDark) {
+        mat.color.setHex(darkColorHex);
+        mat.emissive.setHex(darkEmissive);
+        mat.emissiveIntensity = 0.5;
       } else {
-        logoMaterial.emissive.setHex(0x000000);
-        logoMaterial.emissiveIntensity = 0;
+        mat.color.setHex(baseColorHex);
+        mat.emissive.setHex(0x000000);
+        mat.emissiveIntensity = 0;
       }
-      logoMaterial.needsUpdate = true;
+      mat.needsUpdate = true;
     }
+    paintMat(logoMaterial, 0x540c18, 0xff5a1f, 0xff3a00);
+    paintMat(window._doradoLogoMat, 0xc69444, 0xffaa33, 0xff7a00);
     rim.color.setHex(p.rim);
     rim.intensity = p.rimI;
     ambient.intensity = p.ambient;
@@ -2070,6 +2083,7 @@ import * as THREE from 'three';
 
   logo = buildLogo();
   scene.add(logo);
+  loadAndBuildExtrudedLogo(logo).then(() => applyPalette());
   applyPalette();
 
   window.addEventListener('themechange', applyPalette);
