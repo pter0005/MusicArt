@@ -129,8 +129,9 @@ section {
   content-visibility: auto;
   contain-intrinsic-size: 800px;
 }
-/* Hero é a primeira section, sempre visível — não otimiza ela */
-section.hero { content-visibility: visible; }
+/* Exceções: hero (sempre visível) + alunos (marquee precisa do track width calculado) */
+section.hero,
+section.alunos { content-visibility: visible; }
 h1, h2, h3 { font-family: 'Cormorant Garamond', serif; font-weight: 500; letter-spacing: -0.01em; }
 img { display: block; max-width: 100%; }
 
@@ -1258,12 +1259,34 @@ footer::before {
   .profs-grid { grid-template-columns: 1fr; gap: 24px; }
   .prof-foto { height: 320px; }
   .steps { grid-template-columns: 1fr; gap: 24px; }
+  /* Modalidades: força 2 colunas no mobile + padding menor */
+  .modalidades-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+  .modalidade {
+    padding: 22px 12px;
+  }
+  .modalidade-icon {
+    width: 48px; height: 48px;
+    margin: 0 auto 14px;
+  }
+  .modalidade h4 {
+    font-size: 20px;
+    margin-bottom: 4px;
+  }
+  .modalidade .prof-name {
+    font-size: 9.5px;
+    letter-spacing: 0.14em;
+  }
   .footer-grid { grid-template-columns: 1fr; gap: 40px; }
   .footer-bottom { flex-direction: column; gap: 16px; text-align: center; }
   footer { padding: 60px 20px 32px; }
   .cta-box { padding: 60px 28px; }
-  .aluno-card { flex: 0 0 280px; }
-  .aluno-foto { height: 360px; }
+  .aluno-card { flex: 0 0 220px; }
+  .aluno-foto { aspect-ratio: 3/4; height: auto; }
+  .aluno-info h4 { font-size: 24px; }
+  .aluno-info .instr { font-size: 15px; }
   .float-wa { width: 52px; height: 52px; bottom: 16px; right: 16px; }
   .float-wa svg { width: 26px; height: 26px; }
 }
