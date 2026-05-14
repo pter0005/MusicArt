@@ -1606,6 +1606,32 @@ document.querySelectorAll('.pilares-grid, .modalidades-grid, .steps, .depoimento
   });
 });
 
+// === Sincronizar slideshows dos professores
+// Aguarda todas as fotos carregarem, então reseta as animações simultaneamente
+function syncProfSlideshows() {
+  const imgs = document.querySelectorAll('.prof-foto-slideshow img');
+  if (!imgs.length) return;
+
+  Promise.all(Array.from(imgs).map(img =>
+    (img.complete && img.naturalWidth > 0)
+      ? Promise.resolve()
+      : new Promise(res => { img.addEventListener('load', res, { once: true }); img.addEventListener('error', res, { once: true }); })
+  )).then(() => {
+    // Snapshot do CSS animation atual de cada img (com seu delay original)
+    const original = Array.from(imgs).map(img => getComputedStyle(img).animation);
+    // Remove animação de todas
+    imgs.forEach(img => { img.style.animation = 'none'; });
+    // Force reflow uma vez só (sincroniza tudo)
+    void document.body.offsetWidth;
+    // Re-aplica em rapid succession (no mesmo frame = mesmo startTime)
+    requestAnimationFrame(() => {
+      imgs.forEach((img, i) => { img.style.animation = ''; });
+    });
+  });
+}
+window.addEventListener('load', syncProfSlideshows);
+if (document.readyState === 'complete') syncProfSlideshows();
+
 // === Nav: shadow + active link
 const nav = document.querySelector('nav');
 const navLinks = document.querySelectorAll('.nav-links a:not(.cta-nav)');
