@@ -137,6 +137,11 @@ img { display: block; max-width: 100%; }
     animation-duration: 18s !important;
     animation-iteration-count: infinite !important;
   }
+  /* Carrossel de alunos também é essencial pra UX */
+  .marquee-track {
+    animation-duration: 28s !important;
+    animation-iteration-count: infinite !important;
+  }
 }
 
 .ornament {
@@ -1783,23 +1788,23 @@ createParticles('particles-alunos', 10);
   if (!track) return;
 
   const alunos = [
-    { nome: 'Ana Júlia', instr: 'Piano', img: 'ana-julia' },
-    { nome: 'Felipe', instr: 'Guitarra', img: 'felipe' },
-    { nome: 'Nicolas Botelho', instr: 'Guitarra', img: 'nicolas' },
-    { nome: 'Marcelo Freitas', instr: 'Flauta Transversal', img: 'marcelo' },
-    { nome: 'Victor Costa', instr: 'Saxofone', img: 'victor' },
-    { nome: 'Gabriela Almeida', instr: 'Saxofone', img: 'gabriela' }
+    { nome: 'Ana Júlia', instr: 'Piano', img: 'ana-julia', hasWebp: true },
+    { nome: 'Felipe', instr: 'Guitarra', img: 'felipe', hasWebp: true },
+    { nome: 'Nicolas Botelho', instr: 'Guitarra', img: 'nicolas', hasWebp: true },
+    { nome: 'Marcelo Freitas', instr: 'Flauta Transversal', img: 'marcelo', hasWebp: false },
+    { nome: 'Victor Costa', instr: 'Saxofone', img: 'victor', hasWebp: false },
+    { nome: 'Gabriela Almeida', instr: 'Saxofone', img: 'gabriela', hasWebp: false }
   ];
 
   function cardHTML(aluno, ariaHidden = false) {
+    // Só usa <picture>+webp se existir webp, senão <img> direto
+    const imgTag = `<img src="images/${aluno.img}.jpg" alt="${ariaHidden ? '' : aluno.nome}" loading="lazy" width="675" height="900">`;
+    const picture = aluno.hasWebp
+      ? `<picture><source srcset="images/${aluno.img}.webp" type="image/webp">${imgTag}</picture>`
+      : imgTag;
     return `
       <div class="aluno-card"${ariaHidden ? ' aria-hidden="true"' : ''}>
-        <div class="aluno-foto">
-          <picture>
-            <source srcset="images/${aluno.img}.webp" type="image/webp">
-            <img src="images/${aluno.img}.jpg" alt="${ariaHidden ? '' : aluno.nome}" loading="lazy" width="675" height="900">
-          </picture>
-        </div>
+        <div class="aluno-foto">${picture}</div>
         <div class="aluno-info">
           <span class="aluno-tag">Aluno</span>
           <h4>${aluno.nome}</h4>
