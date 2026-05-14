@@ -26,7 +26,10 @@
 <!-- Fonts -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600&family=Raleway:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://unpkg.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,400&family=Raleway:wght@400;500;600;700&display=swap" rel="stylesheet">
+<!-- Preload da logo (usada no nav imediatamente) -->
+<link rel="preload" as="image" href="images/logo.png">
 
 <!-- Three.js (3D hero) -->
 <script type="importmap">
@@ -124,14 +127,30 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
-/* Otimização: seções fora da viewport não consomem CPU/GPU pra layout/paint */
+/* === PERFORMANCE BOOSTS === */
+/* Seções fora da viewport não consomem CPU/GPU pra layout/paint */
 section {
   content-visibility: auto;
   contain-intrinsic-size: 800px;
 }
-/* Exceções: hero (sempre visível) + alunos (marquee precisa do track width calculado) */
 section.hero,
 section.alunos { content-visibility: visible; }
+
+/* Containers que repintam frequentemente — isola layout/paint do resto */
+.modalidade, .prof-card, .aluno-card, .pilar, .pq-card, .step, .dep-card, .espaco-item {
+  contain: layout style paint;
+}
+
+/* Animações de transform/opacity — hint pro browser otimizar pra GPU */
+.marquee-track,
+.prof-foto-slideshow img,
+.hero-3d-wrap,
+.particles .particle {
+  will-change: transform;
+}
+
+/* Imagens — decodificar assíncrono evita blocking */
+img { content-visibility: auto; }
 h1, h2, h3 { font-family: 'Cormorant Garamond', serif; font-weight: 500; letter-spacing: -0.01em; }
 img { display: block; max-width: 100%; }
 
@@ -660,10 +679,10 @@ nav {
 [data-theme="dark"] .prof-card { border-color: rgba(255, 170, 51, 0.12); }
 .prof-card:hover {
   transform: translateY(-12px);
-  box-shadow: 0 40px 80px rgba(84, 12, 24, 0.18);
+  box-shadow: 0 22px 44px rgba(84, 12, 24, 0.18);
   border-color: var(--dourado);
 }
-[data-theme="dark"] .prof-card:hover { box-shadow: 0 40px 80px rgba(255, 122, 46, 0.25), 0 0 0 1px var(--dourado); }
+[data-theme="dark"] .prof-card:hover { box-shadow: 0 22px 44px rgba(255, 122, 46, 0.25), 0 0 0 1px var(--dourado); }
 .prof-foto {
   position: relative;
   background: var(--nude);
@@ -882,7 +901,7 @@ nav {
 [data-theme="dark"] .aluno-card { border-color: rgba(255, 170, 51, 0.15); }
 .aluno-card:hover {
   transform: translateY(-14px) scale(1.02);
-  box-shadow: 0 35px 70px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
   border-color: var(--dourado);
 }
 .aluno-foto {
@@ -1766,6 +1785,16 @@ function syncProfSlideshows() {
   const imgs = document.querySelectorAll('.prof-foto-slideshow img');
   if (!imgs.length) return;
 
+  // Pausa slideshow quando os cards saem da viewport (economia)
+  if ('IntersectionObserver' in window) {
+    document.querySelectorAll('.prof-foto-slideshow').forEach(slideshow => {
+      new IntersectionObserver((entries) => {
+        const playState = entries[0].isIntersecting ? 'running' : 'paused';
+        slideshow.querySelectorAll('img').forEach(img => { img.style.animationPlayState = playState; });
+      }, { threshold: 0 }).observe(slideshow);
+    });
+  }
+
   Promise.all(Array.from(imgs).map(img =>
     (img.complete && img.naturalWidth > 0)
       ? Promise.resolve()
@@ -1786,26 +1815,43 @@ function syncProfSlideshows() {
 window.addEventListener('load', syncProfSlideshows);
 if (document.readyState === 'complete') syncProfSlideshows();
 
-// === Nav: shadow + active link
+// === Nav: shadow no scroll (throttled com rAF) + active link via IntersectionObserver
 const nav = document.querySelector('nav');
 const navLinks = document.querySelectorAll('.nav-links a:not(.cta-nav)');
-const sections = ['pilares','para-quem','professores','modalidades','alunos','espaco','contato']
-  .map(id => document.getElementById(id)).filter(Boolean);
 
+// Shadow no scroll — só atualiza no rAF, passive listener
+let scrollTick = false;
+let lastShadow = false;
 window.addEventListener('scroll', () => {
-  if (window.scrollY > 20) nav.style.boxShadow = '0 4px 30px rgba(0,0,0,0.06)';
-  else nav.style.boxShadow = 'none';
+  if (scrollTick) return;
+  scrollTick = true;
+  requestAnimationFrame(() => {
+    const should = window.scrollY > 20;
+    if (should !== lastShadow) {
+      nav.style.boxShadow = should ? '0 4px 30px rgba(0,0,0,0.06)' : 'none';
+      lastShadow = should;
+    }
+    scrollTick = false;
+  });
+}, { passive: true });
 
-  // Active link
-  const scrollY = window.scrollY + 100;
-  let currentId = '';
-  for (const sec of sections) {
-    if (scrollY >= sec.offsetTop) currentId = sec.id;
+// Active link via IntersectionObserver (zero scroll listener overhead)
+const sectionIds = ['pilares','para-quem','professores','modalidades','alunos','espaco','contato'];
+const sectionEls = sectionIds.map(id => document.getElementById(id)).filter(Boolean);
+let activeMap = new Map();
+const sectionObserver = new IntersectionObserver((entries) => {
+  entries.forEach(e => activeMap.set(e.target.id, e.intersectionRatio));
+  // Pega a section com maior ratio
+  let best = '';
+  let bestRatio = 0;
+  for (const [id, r] of activeMap.entries()) {
+    if (r > bestRatio) { bestRatio = r; best = id; }
   }
   navLinks.forEach(a => {
-    a.classList.toggle('active', a.getAttribute('href') === '#' + currentId);
+    a.classList.toggle('active', a.getAttribute('href') === '#' + best);
   });
-});
+}, { threshold: [0, 0.25, 0.5, 0.75], rootMargin: '-15% 0px -50% 0px' });
+sectionEls.forEach(s => sectionObserver.observe(s));
 
 // === Menu mobile
 const menuToggle = document.getElementById('menuToggle');
@@ -1874,6 +1920,14 @@ createParticles('particles-alunos', isMobileViewport ? 5 : 10);
   // 2 sets pro loop infinito ficar suave
   const html = alunos.map(a => cardHTML(a)).join('') + alunos.map(a => cardHTML(a, true)).join('');
   track.innerHTML = html;
+
+  // Pausa o marquee quando a seção sai da viewport (economia GPU)
+  const alunosSection = document.querySelector('.alunos');
+  if (alunosSection && 'IntersectionObserver' in window) {
+    new IntersectionObserver((entries) => {
+      track.style.animationPlayState = entries[0].isIntersecting ? 'running' : 'paused';
+    }, { threshold: 0 }).observe(alunosSection);
+  }
 })();
 
 // === Theme toggle
