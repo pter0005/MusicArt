@@ -143,10 +143,10 @@ section.alunos { content-visibility: visible; }
 
 /* Animações de transform/opacity — hint pro browser otimizar pra GPU */
 .marquee-track,
-.prof-foto-slideshow img,
+.prof-foto-slideshow picture,
 .hero-3d-wrap,
 .particles .particle {
-  will-change: transform;
+  will-change: opacity, transform;
 }
 
 /* Imagens — decodificar assíncrono evita blocking */
@@ -162,7 +162,7 @@ img { display: block; max-width: 100%; }
     transition-duration: 0.01ms !important;
   }
   /* Exceção: slideshow das fotos é conteúdo essencial — sempre roda */
-  .prof-foto-slideshow img {
+  .prof-foto-slideshow picture {
     animation-duration: 18s !important;
     animation-iteration-count: infinite !important;
   }
@@ -697,20 +697,25 @@ nav {
 }
 .prof-card:hover .prof-foto img { transform: scale(1.05); }
 
-/* Slideshow sutil: várias imgs sobrepostas com fade automático */
-.prof-foto-slideshow img {
+/* Slideshow sutil: várias <picture> sobrepostas com fade automático */
+.prof-foto-slideshow picture {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
-  object-fit: cover;
-  object-position: center 25%;
   opacity: 0;
   animation: profSlideshow 18s infinite;
+  display: block;
 }
-.prof-foto-slideshow img:nth-child(1) { animation-delay: 0s; }
-.prof-foto-slideshow img:nth-child(2) { animation-delay: 6s; }
-.prof-foto-slideshow img:nth-child(3) { animation-delay: 12s; }
+.prof-foto-slideshow picture img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 25%;
+}
+.prof-foto-slideshow picture:nth-child(1) { animation-delay: 0s; }
+.prof-foto-slideshow picture:nth-child(2) { animation-delay: 6s; }
+.prof-foto-slideshow picture:nth-child(3) { animation-delay: 12s; }
 @keyframes profSlideshow {
   0%    { opacity: 0; }
   4%    { opacity: 1; }
@@ -719,7 +724,7 @@ nav {
   100%  { opacity: 0; }
 }
 /* Pausa animação no hover pro hover-zoom funcionar bonito */
-.prof-card:hover .prof-foto-slideshow img {
+.prof-card:hover .prof-foto-slideshow picture {
   animation-play-state: paused;
 }
 .prof-foto::before {
@@ -1533,9 +1538,9 @@ footer::before {
   <div class="profs-grid">
     <div class="prof-card reveal">
       <div class="prof-foto prof-foto-slideshow">
-        <img src="images/antonio.jpg" alt="Professor Antonio" loading="lazy" width="675" height="900">
-        <img src="images/antonio-2.jpg" alt="" loading="lazy">
-        <img src="images/antonio-3.jpg" alt="" loading="lazy">
+        <picture><source srcset="images/antonio.webp" type="image/webp"><img src="images/antonio.jpg" alt="Professor Antonio" loading="lazy" decoding="async" width="675" height="900"></picture>
+        <picture><source srcset="images/antonio-2.webp" type="image/webp"><img src="images/antonio-2.jpg" alt="" loading="lazy" decoding="async"></picture>
+        <picture><source srcset="images/antonio-3.webp" type="image/webp"><img src="images/antonio-3.jpg" alt="" loading="lazy" decoding="async"></picture>
       </div>
       <div class="prof-info">
         <div class="prof-tag">Sopros & Piano</div>
@@ -1552,9 +1557,9 @@ footer::before {
     </div>
     <div class="prof-card reveal">
       <div class="prof-foto prof-foto-slideshow">
-        <img src="images/gabriel.jpg" alt="Professor Gabriel" loading="lazy" width="675" height="900">
-        <img src="images/gabriel-2.jpg" alt="" loading="lazy">
-        <img src="images/gabriel-3.jpg" alt="" loading="lazy">
+        <picture><source srcset="images/gabriel.webp" type="image/webp"><img src="images/gabriel.jpg" alt="Professor Gabriel" loading="lazy" decoding="async" width="675" height="900"></picture>
+        <picture><source srcset="images/gabriel-2.webp" type="image/webp"><img src="images/gabriel-2.jpg" alt="" loading="lazy" decoding="async"></picture>
+        <picture><source srcset="images/gabriel-3.webp" type="image/webp"><img src="images/gabriel-3.jpg" alt="" loading="lazy" decoding="async"></picture>
       </div>
       <div class="prof-info">
         <div class="prof-tag">Cordas</div>
@@ -1779,41 +1784,17 @@ document.querySelectorAll('.modalidade').forEach(card => {
   card.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handler(); } });
 });
 
-// === Sincronizar slideshows dos professores
-// Aguarda todas as fotos carregarem, então reseta as animações simultaneamente
-function syncProfSlideshows() {
-  const imgs = document.querySelectorAll('.prof-foto-slideshow img');
-  if (!imgs.length) return;
-
-  // Pausa slideshow quando os cards saem da viewport (economia)
-  if ('IntersectionObserver' in window) {
-    document.querySelectorAll('.prof-foto-slideshow').forEach(slideshow => {
-      new IntersectionObserver((entries) => {
-        const playState = entries[0].isIntersecting ? 'running' : 'paused';
-        slideshow.querySelectorAll('img').forEach(img => { img.style.animationPlayState = playState; });
-      }, { threshold: 0 }).observe(slideshow);
-    });
-  }
-
-  Promise.all(Array.from(imgs).map(img =>
-    (img.complete && img.naturalWidth > 0)
-      ? Promise.resolve()
-      : new Promise(res => { img.addEventListener('load', res, { once: true }); img.addEventListener('error', res, { once: true }); })
-  )).then(() => {
-    // Snapshot do CSS animation atual de cada img (com seu delay original)
-    const original = Array.from(imgs).map(img => getComputedStyle(img).animation);
-    // Remove animação de todas
-    imgs.forEach(img => { img.style.animation = 'none'; });
-    // Force reflow uma vez só (sincroniza tudo)
-    void document.body.offsetWidth;
-    // Re-aplica em rapid succession (no mesmo frame = mesmo startTime)
-    requestAnimationFrame(() => {
-      imgs.forEach((img, i) => { img.style.animation = ''; });
-    });
+// === Slideshow dos professores: pausa offscreen pra economizar GPU
+// Sync natural porque os <picture> são parte do DOM inicial (não lazy)
+(function () {
+  if (!('IntersectionObserver' in window)) return;
+  document.querySelectorAll('.prof-foto-slideshow').forEach(slideshow => {
+    new IntersectionObserver((entries) => {
+      const playState = entries[0].isIntersecting ? 'running' : 'paused';
+      slideshow.querySelectorAll('picture').forEach(p => { p.style.animationPlayState = playState; });
+    }, { threshold: 0 }).observe(slideshow);
   });
-}
-window.addEventListener('load', syncProfSlideshows);
-if (document.readyState === 'complete') syncProfSlideshows();
+})();
 
 // === Nav: shadow no scroll (throttled com rAF) + active link via IntersectionObserver
 const nav = document.querySelector('nav');
@@ -1891,24 +1872,25 @@ createParticles('particles-alunos', isMobileViewport ? 5 : 10);
   const track = document.getElementById('marqueeTrack');
   if (!track) return;
 
+  // Todos têm webp gerado agora
   const alunos = [
-    { nome: 'Ana Júlia', instr: 'Piano', img: 'ana-julia', hasWebp: true },
-    { nome: 'Felipe', instr: 'Guitarra', img: 'felipe', hasWebp: true },
-    { nome: 'Nicolas Botelho', instr: 'Guitarra', img: 'nicolas', hasWebp: true },
-    { nome: 'Marcelo Freitas', instr: 'Flauta Transversal', img: 'marcelo', hasWebp: false },
-    { nome: 'Victor Costa', instr: 'Saxofone', img: 'victor', hasWebp: false },
-    { nome: 'Gabriela Almeida', instr: 'Saxofone', img: 'gabriela', hasWebp: false }
+    { nome: 'Ana Júlia', instr: 'Piano', img: 'ana-julia' },
+    { nome: 'Felipe', instr: 'Guitarra', img: 'felipe' },
+    { nome: 'Nicolas Botelho', instr: 'Guitarra', img: 'nicolas' },
+    { nome: 'Marcelo Freitas', instr: 'Flauta Transversal', img: 'marcelo' },
+    { nome: 'Victor Costa', instr: 'Saxofone', img: 'victor' },
+    { nome: 'Gabriela Almeida', instr: 'Saxofone', img: 'gabriela' }
   ];
 
   function cardHTML(aluno, ariaHidden = false) {
-    // Só usa <picture>+webp se existir webp, senão <img> direto
-    const imgTag = `<img src="images/${aluno.img}.jpg" alt="${ariaHidden ? '' : aluno.nome}" loading="lazy" width="675" height="900">`;
-    const picture = aluno.hasWebp
-      ? `<picture><source srcset="images/${aluno.img}.webp" type="image/webp">${imgTag}</picture>`
-      : imgTag;
     return `
       <div class="aluno-card"${ariaHidden ? ' aria-hidden="true"' : ''}>
-        <div class="aluno-foto">${picture}</div>
+        <div class="aluno-foto">
+          <picture>
+            <source srcset="images/${aluno.img}.webp" type="image/webp">
+            <img src="images/${aluno.img}.jpg" alt="${ariaHidden ? '' : aluno.nome}" loading="lazy" decoding="async" width="675" height="900">
+          </picture>
+        </div>
         <div class="aluno-info">
           <span class="aluno-tag">Aluno</span>
           <h4>${aluno.nome}</h4>
