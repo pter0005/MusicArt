@@ -927,6 +927,68 @@ nav {
   display: inline-block;
 }
 
+/* NOSSO ESPAÇO */
+.espaco {
+  padding: 130px 60px;
+  background: var(--bg-section);
+  position: relative;
+  overflow: hidden;
+}
+.espaco-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  grid-auto-rows: 240px;
+  gap: 16px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+.espaco-item {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius);
+  background: var(--bg-card);
+  transition: transform 0.5s var(--ease), box-shadow 0.5s var(--ease);
+  cursor: pointer;
+}
+.espaco-item.espaco-tall { grid-row: span 2; }
+.espaco-item.espaco-wide { grid-column: span 2; }
+.espaco-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.8s var(--ease);
+  display: block;
+}
+.espaco-item:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 30px 60px rgba(84, 12, 24, 0.18);
+}
+[data-theme="dark"] .espaco-item:hover {
+  box-shadow: 0 30px 60px rgba(255, 122, 46, 0.2);
+}
+.espaco-item:hover img { transform: scale(1.06); }
+.espaco-item::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent 60%, rgba(84, 12, 24, 0.35));
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+.espaco-item:hover::after { opacity: 1; }
+
+@media (max-width: 968px) {
+  .espaco { padding: 80px 20px; }
+  .espaco-grid {
+    grid-template-columns: repeat(2, 1fr);
+    grid-auto-rows: 180px;
+    gap: 12px;
+  }
+  .espaco-item.espaco-wide { grid-column: span 2; }
+  .espaco-item.espaco-tall { grid-row: span 2; }
+}
+
 /* COMO FUNCIONA */
 .como-funciona { padding: 130px 60px; background: var(--bg-section); position: relative; overflow: hidden; }
 .como-funciona::before {
@@ -1491,6 +1553,36 @@ footer::before {
   </div>
 </section>
 
+<!-- NOSSO ESPAÇO -->
+<section class="espaco" id="espaco">
+  <div class="section-header reveal">
+    <div class="section-tag">Onde a magia acontece</div>
+    <h2 class="section-title">Nosso <em>espaço</em>.</h2>
+    <p class="section-sub">Salas acolhedoras, instrumentos preparados e ambiente pensado pra você aprender com prazer.</p>
+    <div class="ornament"><span class="line"></span><svg><use href="#ornament"/></svg><span class="line"></span></div>
+  </div>
+  <div class="espaco-grid">
+    <div class="espaco-item espaco-tall reveal">
+      <img src="images/espaco-1.jpg" alt="Espaço da escola" loading="lazy" onerror="this.style.opacity=0.3;this.alt='Coloque images/espaco-1.jpg'">
+    </div>
+    <div class="espaco-item reveal">
+      <img src="images/espaco-2.jpg" alt="" loading="lazy" onerror="this.style.opacity=0.3">
+    </div>
+    <div class="espaco-item reveal">
+      <img src="images/espaco-3.jpg" alt="" loading="lazy" onerror="this.style.opacity=0.3">
+    </div>
+    <div class="espaco-item espaco-wide reveal">
+      <img src="images/espaco-4.jpg" alt="" loading="lazy" onerror="this.style.opacity=0.3">
+    </div>
+    <div class="espaco-item reveal">
+      <img src="images/espaco-5.jpg" alt="" loading="lazy" onerror="this.style.opacity=0.3">
+    </div>
+    <div class="espaco-item espaco-tall reveal">
+      <img src="images/espaco-6.jpg" alt="" loading="lazy" onerror="this.style.opacity=0.3">
+    </div>
+  </div>
+</section>
+
 <!-- COMO FUNCIONA -->
 <section class="como-funciona" id="como-funciona">
   <div class="section-header reveal">
@@ -1635,7 +1727,7 @@ if (document.readyState === 'complete') syncProfSlideshows();
 // === Nav: shadow + active link
 const nav = document.querySelector('nav');
 const navLinks = document.querySelectorAll('.nav-links a:not(.cta-nav)');
-const sections = ['pilares','para-quem','professores','modalidades','alunos','contato']
+const sections = ['pilares','para-quem','professores','modalidades','alunos','espaco','contato']
   .map(id => document.getElementById(id)).filter(Boolean);
 
 window.addEventListener('scroll', () => {
@@ -1727,9 +1819,9 @@ createParticles('particles-alunos', 10);
   const toggle = document.getElementById('themeToggle');
   if (!toggle) return;
 
+  // Site é naturalmente claro — só usa dark se o usuário ativou explicitamente
   const stored = localStorage.getItem('theme');
-  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-  const initial = stored || (prefersDark ? 'dark' : 'light');
+  const initial = stored === 'dark' ? 'dark' : 'light';
   root.setAttribute('data-theme', initial);
 
   function setTheme(theme) {
@@ -1844,12 +1936,12 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
   buildShapes(data.bordo.paths, bordoMat, 0);
   buildShapes(data.dourado.paths, doradoMat, 0.06);
   // Scale: 0.625 + 20% = 0.75
-  logoGroup.scale.set(0.75, 0.75, 0.75);
+  logoGroup.scale.set(0.825, 0.825, 0.825);
   scene.add(logoGroup);
 
-  // Drag + rotação automática AINDA MAIS LENTA, 360° contínuo
+  // Drag + rotação automática 360° contínuo, sutil mas visível
   let rotY = -0.2, rotX = 0.08;
-  const velY = 0.0022; // ~50s por volta completa
+  const velY = 0.004; // ~26s por volta completa, visível mas elegante
   let isDragging = false;
   let lastX = 0, lastY = 0;
   let pausedUntil = 0;
