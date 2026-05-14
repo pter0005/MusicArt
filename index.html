@@ -121,7 +121,16 @@ body {
   line-height: 1.6;
   overflow-x: hidden;
   transition: background 0.5s ease, color 0.5s ease;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
+/* Otimização: seções fora da viewport não consomem CPU/GPU pra layout/paint */
+section {
+  content-visibility: auto;
+  contain-intrinsic-size: 800px;
+}
+/* Hero é a primeira section, sempre visível — não otimiza ela */
+section.hero { content-visibility: visible; }
 h1, h2, h3 { font-family: 'Cormorant Garamond', serif; font-weight: 500; letter-spacing: -0.01em; }
 img { display: block; max-width: 100%; }
 
@@ -1804,8 +1813,9 @@ function createParticles(containerId, count) {
     container.appendChild(p);
   }
 }
-createParticles('particles-hero', 12);
-createParticles('particles-alunos', 10);
+const isMobileViewport = window.matchMedia('(max-width: 768px)').matches;
+createParticles('particles-hero', isMobileViewport ? 6 : 12);
+createParticles('particles-alunos', isMobileViewport ? 5 : 10);
 
 // === Carrossel de alunos (auto-girando)
 (function () {
@@ -1880,8 +1890,10 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
   const camera = new THREE.PerspectiveCamera(40, 1, 0.1, 100);
   camera.position.set(0, 0, 11);
 
-  const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true, powerPreference: 'high-performance' });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  const isMobile = window.matchMedia('(max-width: 768px)').matches;
+  const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: !isMobile, powerPreference: 'high-performance' });
+  // Pixel ratio mais baixo no mobile = mais FPS
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, isMobile ? 1.5 : 2));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.2;
@@ -1971,7 +1983,8 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 
   // Drag + rotação automática 360° contínuo, sutil mas visível
   let rotY = -0.2, rotX = 0.08;
-  const velY = 0.004; // ~26s por volta completa, visível mas elegante
+  // Mobile gira ~2x mais rápido (~13s/volta), desktop fica em 26s
+  const velY = isMobile ? 0.008 : 0.004;
   let isDragging = false;
   let lastX = 0, lastY = 0;
   let pausedUntil = 0;
@@ -2003,9 +2016,17 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
   window.addEventListener('resize', onResize);
   onResize();
 
+  // Pausa o render quando o hero sair da viewport (economia massiva de GPU)
+  let isVisible = true;
+  const visObserver = new IntersectionObserver(entries => {
+    isVisible = entries[0].isIntersecting;
+  }, { threshold: 0, rootMargin: '100px' });
+  visObserver.observe(container);
+
   const t0 = performance.now();
   function animate() {
     requestAnimationFrame(animate);
+    if (!isVisible) return; // skip TUDO quando hero offscreen
     const t = (performance.now() - t0) / 1000;
 
     if (!isDragging && performance.now() > pausedUntil) {
