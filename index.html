@@ -1950,9 +1950,10 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
   camera.position.set(0, 0, 11);
 
   const isMobile = window.matchMedia('(max-width: 768px)').matches;
-  const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: !isMobile, powerPreference: 'high-performance' });
-  // Pixel ratio mais baixo no mobile = mais FPS
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, isMobile ? 1.5 : 2));
+  // Antialias SEMPRE ligado (MSAA é hardware-accelerated, custo baixo, qualidade altíssima)
+  const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true, powerPreference: 'high-performance' });
+  // Pixel ratio full retina (cap 2) — canvas pequeno, phones aguentam
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.2;
