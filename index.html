@@ -132,6 +132,15 @@ img { display: block; max-width: 100%; }
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+  /* Exceção: slideshow das fotos dos professores é conteúdo essencial,
+     não decoração. Mostra a primeira foto estática (sem animação). */
+  .prof-foto-slideshow img {
+    animation: none !important;
+    opacity: 0 !important;
+  }
+  .prof-foto-slideshow img:first-child {
+    opacity: 1 !important;
+  }
 }
 
 .ornament {
