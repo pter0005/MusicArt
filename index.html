@@ -657,6 +657,28 @@ nav {
   transition: transform 1s var(--ease);
 }
 .prof-card:hover .prof-foto img { transform: scale(1.05); }
+
+/* Slideshow sutil: várias imgs sobrepostas com fade automático */
+.prof-foto-slideshow img {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  animation: profSlideshow 18s infinite;
+}
+.prof-foto-slideshow img:nth-child(1) { animation-delay: 0s; }
+.prof-foto-slideshow img:nth-child(2) { animation-delay: 6s; }
+.prof-foto-slideshow img:nth-child(3) { animation-delay: 12s; }
+@keyframes profSlideshow {
+  0%    { opacity: 0; }
+  4%    { opacity: 1; }
+  30%   { opacity: 1; }
+  37%   { opacity: 0; }
+  100%  { opacity: 0; }
+}
+/* Pausa animação no hover pro hover-zoom funcionar bonito */
+.prof-card:hover .prof-foto-slideshow img {
+  animation-play-state: paused;
+}
 .prof-foto::before {
   content: ''; position: absolute; inset: 0;
   background: linear-gradient(180deg, transparent 0%, transparent 55%, rgba(84, 12, 24, 0.55) 100%);
@@ -1383,11 +1405,10 @@ footer::before {
   </div>
   <div class="profs-grid">
     <div class="prof-card reveal">
-      <div class="prof-foto">
-        <picture>
-          <source srcset="images/antonio.webp" type="image/webp">
-          <img src="images/antonio.jpg" alt="Professor Antonio" loading="lazy" width="675" height="900">
-        </picture>
+      <div class="prof-foto prof-foto-slideshow">
+        <img src="images/antonio.jpg" alt="Professor Antonio" loading="lazy" width="675" height="900">
+        <img src="images/antonio-2.jpg" alt="" loading="lazy">
+        <img src="images/antonio-3.jpg" alt="" loading="lazy">
       </div>
       <div class="prof-info">
         <div class="prof-tag">Sopros & Piano</div>
