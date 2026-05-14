@@ -1703,6 +1703,31 @@ document.querySelectorAll('.pilares-grid, .modalidades-grid, .steps, .depoimento
   });
 });
 
+// === Modalidades clicáveis: scroll pra contato + pre-fill WhatsApp por instrumento
+const WHATSAPP_PHONE = '5511912410875';
+function setInstrumentoCTA(instrumento) {
+  const baseMsg = instrumento
+    ? `Olá! Vi o site e queria saber sobre aulas de ${instrumento}. Quero agendar minha aula experimental.`
+    : `Olá! Vi o site e queria agendar minha aula experimental.`;
+  const url = `https://wa.me/${WHATSAPP_PHONE}?text=${encodeURIComponent(baseMsg)}`;
+  // Atualiza TODOS os links de WhatsApp do CTA final + hero + botão flutuante
+  document.querySelectorAll('a[href*="wa.me"]').forEach(a => {
+    a.href = url;
+  });
+}
+document.querySelectorAll('.modalidade').forEach(card => {
+  card.style.cursor = 'pointer';
+  card.setAttribute('role', 'button');
+  card.setAttribute('tabindex', '0');
+  const handler = () => {
+    const inst = card.querySelector('h4')?.textContent?.trim();
+    setInstrumentoCTA(inst);
+    document.getElementById('contato')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+  card.addEventListener('click', handler);
+  card.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handler(); } });
+});
+
 // === Sincronizar slideshows dos professores
 // Aguarda todas as fotos carregarem, então reseta as animações simultaneamente
 function syncProfSlideshows() {
